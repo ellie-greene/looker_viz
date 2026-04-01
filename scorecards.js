@@ -60,7 +60,3 @@ looker.plugins.visualizations.add({
     done();
   }
 });
-
-    done();
-  }
-});
