@@ -30,7 +30,7 @@ looker.plugins.visualizations.add({
 
       container.innerHTML = `
         <div style="text-align:center; font-family: 'Inter', 'Roboto', sans-serif;">
-          <div style="font-size:2.5em; font-weight:600; color:#282828;">${mainValue}</div>
+          <div id="kpi-main-value" style="font-size:2.5em; font-weight:600; color:#282828; cursor:pointer;">${mainValue}</div>
           <div style="font-size:0.85em; color:#696969; margin-top:4px;">
             ${targetEmoji} ${targetRendered} vs target
           </div>
@@ -39,6 +39,16 @@ looker.plugins.visualizations.add({
           </div>
         </div>
       `;
+
+      var drillLinks = row[mainField.name].links;
+      if (drillLinks && drillLinks.length > 0) {
+        document.getElementById('kpi-main-value').addEventListener('click', function(e) {
+          LookerCharts.Utils.openDrillMenu({
+            links: drillLinks,
+            event: e
+          });
+        });
+      }
 
     } catch(e) {
       console.error("KPI VIZ ERROR:", e);
