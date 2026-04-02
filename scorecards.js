@@ -16,6 +16,7 @@ looker.plugins.visualizations.add({
       var mainValue   = row[mainField.name].rendered || row[mainField.name].value;
       var targetValue = row[targetField.name].value;
       var ppValue     = row[ppField.name].value;
+      console.log("KPI VIZ: main field links", JSON.stringify(row[mainField.name]));
 
       var targetRendered = row[targetField.name].rendered || (targetValue * 100).toFixed(1) + '%';
       var ppRendered     = row[ppField.name].rendered    || (ppValue * 100).toFixed(1) + '%';
