@@ -8,34 +8,31 @@ looker.plugins.visualizations.add({
       var row       = data[0];
       var fields    = queryResponse.fields;
       var allFields = fields.measures.concat(fields.dimensions);
+
       var mainField   = allFields[0];
-      var targetField = allFields[1];
-      var ppField     = allFields[2];
+      var targetField = allFields[1] || null;
+      var ppField     = allFields[2] || null;
 
-      var mainValue   = row[mainField.name].rendered || row[mainField.name].value;
-      var targetValue = row[targetField.name].value;
-      var ppValue     = row[ppField.name].value;
+      var mainValue = row[mainField.name].rendered || row[mainField.name].value;
 
-console.log("KPI VIZ: main field links", JSON.stringify(row[mainField.name]));
-      console.log("KPI VIZ: target field raw", JSON.stringify(row[targetField.name]));
-      console.log("KPI VIZ: pp field raw", JSON.stringify(row[ppField.name]));
-
-      // Build target line only if value is non-null and non-zero
+      // Build target line only if field exists in the query
       var targetLine = '';
-      if (targetValue !== null && targetValue !== undefined && parseFloat(targetValue) !== 0) {
+      if (targetField) {
+        var targetValue    = row[targetField.name].value;
         var targetRendered = row[targetField.name].rendered || (targetValue * 100).toFixed(1) + '%';
-        var targetEmoji = targetValue > 0.95 ? '🟢' : targetValue > 0.90 ? '🟡' : '🔴';
+        var targetEmoji    = targetValue > 0.95 ? '🟢' : targetValue > 0.90 ? '🟡' : '🔴';
         targetLine = `
           <div style="font-size:0.85em; color:#696969; margin-top:4px;">
             ${targetEmoji} ${targetRendered} vs target
           </div>`;
       }
 
-      // Build prev period line only if value is non-null and non-zero
+      // Build prev period line only if field exists in the query
       var ppLine = '';
-      if (ppValue !== null && ppValue !== undefined && parseFloat(ppValue) !== 0) {
+      if (ppField) {
+        var ppValue    = row[ppField.name].value;
         var ppRendered = row[ppField.name].rendered || (ppValue * 100).toFixed(1) + '%';
-        var ppArrow = ppValue >= 0
+        var ppArrow    = ppValue >= 0
           ? '<span style="color:green;">▲</span>'
           : '<span style="color:red;">▼</span>';
         ppLine = `
