@@ -9,6 +9,8 @@ looker.plugins.visualizations.add({
       var fields    = queryResponse.fields;
       var allFields = fields.measures.concat(fields.dimensions);
 
+      console.log("KPI VIZ: allFields", JSON.stringify(allFields.map(f => f.name)));
+
       var mainField   = allFields[0];
       var targetField = allFields[1] || null;
       var ppField     = allFields[2] || null;
