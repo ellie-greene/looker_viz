@@ -5,6 +5,7 @@ looker.plugins.visualizations.add({
   },
   updateAsync: function(data, element, config, queryResponse, details, done) {
     try {
+      console.log("fields keys:", Object.keys(queryResponse.fields));
       var row       = data[0];
       var fields    = queryResponse.fields;
       var allFields = fields.dimensions.concat(fields.measures);
