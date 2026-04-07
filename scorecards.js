@@ -30,7 +30,7 @@ looker.plugins.visualizations.add({
       var container = document.getElementById('kpi-container');
 
       container.innerHTML = `
-        <div style="text-align:center; font-family: 'Roboto', sans-serif;">
+        <div style="text-align:center; font-family: 'Google Sans', 'Roboto', sans-serif;">
           <div id="kpi-main-value" style="font-size:2.5em; font-weight:600; color:#282828; cursor:pointer;">${mainValue}</div>
           <div style="font-size:0.85em; color:#696969; margin-top:4px;">
             ${targetEmoji} ${targetRendered} vs target
