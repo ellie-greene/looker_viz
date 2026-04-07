@@ -5,31 +5,35 @@ looker.plugins.visualizations.add({
   },
   updateAsync: function(data, element, config, queryResponse, details, done) {
     try {
-      console.log("fields keys:", Object.keys(queryResponse.fields));
-      var row       = data[0];
-      var fields    = queryResponse.fields;
-      var allFields = fields.dimensions.concat(fields.measures);
+      console.log("KPI VIZ: data length", data && data.length);
+      console.log("KPI VIZ: fields keys", queryResponse && queryResponse.fields && Object.keys(queryResponse.fields));
 
-      console.log("KPI VIZ: queryResponse.fields", JSON.stringify(queryResponse.fields));
+      if (!data || data.length === 0) { done(); return; }
+
+      var row    = data[0];
+      var fields = queryResponse.fields;
+      var allFields = (fields.measures || [])
+        .concat(fields.dimensions || [])
+        .concat(fields.table_calculations || []);
+
+      console.log("KPI VIZ: allFields count", allFields.length, allFields.map(function(f){ return f.name; }));
+
+      if (allFields.length === 0) { done(); return; }
+
       var mainField   = allFields[0];
       var targetField = allFields[1] || null;
       var ppField     = allFields[2] || null;
 
       var mainValue = row[mainField.name].rendered || row[mainField.name].value;
 
-      // Build target line only if field exists in the query
       var targetLine = '';
       if (targetField) {
         var targetValue    = row[targetField.name].value;
         var targetRendered = row[targetField.name].rendered || (targetValue * 100).toFixed(1) + '%';
         var targetEmoji    = targetValue > 0.95 ? '🟢' : targetValue > 0.90 ? '🟡' : '🔴';
-        targetLine = `
-          <div style="font-size:0.85em; color:#696969; margin-top:4px;">
-            ${targetEmoji} ${targetRendered} vs target
-          </div>`;
+        targetLine = '<div style="font-size:0.85em; color:#696969; margin-top:4px;">' + targetEmoji + ' ' + targetRendered + ' vs target</div>';
       }
 
-      // Build prev period line only if field exists in the query
       var ppLine = '';
       if (ppField) {
         var ppValue    = row[ppField.name].value;
@@ -37,28 +41,21 @@ looker.plugins.visualizations.add({
         var ppArrow    = ppValue >= 0
           ? '<span style="color:green;">▲</span>'
           : '<span style="color:red;">▼</span>';
-        ppLine = `
-          <div style="font-size:0.85em; color:#696969; margin-top:2px;">
-            ${ppArrow} ${ppRendered} vs prev. period
-          </div>`;
+        ppLine = '<div style="font-size:0.85em; color:#696969; margin-top:2px;">' + ppArrow + ' ' + ppRendered + ' vs prev. period</div>';
       }
 
       var container = document.getElementById('kpi-container');
-      container.innerHTML = `
-        <div style="text-align:center; font-family: 'Google Sans', 'Roboto', sans-serif;">
-          <div id="kpi-main-value" style="font-size:2.5em; font-weight:600; color:#282828; cursor:pointer;">${mainValue}</div>
-          ${targetLine}
-          ${ppLine}
-        </div>
-      `;
+      container.innerHTML =
+        '<div style="text-align:center; font-family: Google Sans, Roboto, sans-serif;">' +
+          '<div id="kpi-main-value" style="font-size:2.5em; font-weight:600; color:#282828; cursor:pointer;">' + mainValue + '</div>' +
+          targetLine +
+          ppLine +
+        '</div>';
 
       var drillLinks = row[mainField.name].links;
       if (drillLinks && drillLinks.length > 0) {
         document.getElementById('kpi-main-value').addEventListener('click', function(e) {
-          LookerCharts.Utils.openDrillMenu({
-            links: drillLinks,
-            event: e
-          });
+          LookerCharts.Utils.openDrillMenu({ links: drillLinks, event: e });
         });
       }
     } catch(e) {
