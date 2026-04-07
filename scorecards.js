@@ -16,8 +16,9 @@ looker.plugins.visualizations.add({
       var targetValue = row[targetField.name].value;
       var ppValue     = row[ppField.name].value;
 
-      console.log("KPI VIZ: main field links", JSON.stringify(row[mainField.name]));
-      console.log("KPI VIZ values:", mainValue, "|", targetValue, typeof targetValue, "|", ppValue, typeof ppValue);
+console.log("KPI VIZ: main field links", JSON.stringify(row[mainField.name]));
+      console.log("KPI VIZ: target field raw", JSON.stringify(row[targetField.name]));
+      console.log("KPI VIZ: pp field raw", JSON.stringify(row[ppField.name]));
 
       // Build target line only if value is non-null and non-zero
       var targetLine = '';
