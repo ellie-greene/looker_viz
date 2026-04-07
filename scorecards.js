@@ -20,7 +20,7 @@ looker.plugins.visualizations.add({
 
       // Build target line only if value is non-null and non-zero
       var targetLine = '';
-      if (targetValue !== null && targetValue !== 0) {
+      if (targetValue !== null && targetValue !== undefined && parseFloat(targetValue) !== 0) {
         var targetRendered = row[targetField.name].rendered || (targetValue * 100).toFixed(1) + '%';
         var targetEmoji = targetValue > 0.95 ? '🟢' : targetValue > 0.90 ? '🟡' : '🔴';
         targetLine = `
@@ -31,7 +31,7 @@ looker.plugins.visualizations.add({
 
       // Build prev period line only if value is non-null and non-zero
       var ppLine = '';
-      if (ppValue !== null && ppValue !== 0) {
+      if (ppValue !== null && ppValue !== undefined && parseFloat(ppValue) !== 0) {
         var ppRendered = row[ppField.name].rendered || (ppValue * 100).toFixed(1) + '%';
         var ppArrow = ppValue >= 0
           ? '<span style="color:green;">▲</span>'
