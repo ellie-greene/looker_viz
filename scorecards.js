@@ -26,15 +26,7 @@ looker.plugins.visualizations.add({
 
       var mainValue = row[mainField.name].rendered || row[mainField.name].value;
 
-      var targetLine = '';
-      if (targetField) {
-        var targetValue    = row[targetField.name].value;
-        var targetRendered = row[targetField.name].rendered || (targetValue * 100).toFixed(1) + '%';
-        var targetEmoji    = targetValue > 0.95 ? '🟢' : targetValue > 0.90 ? '🟡' : '🔴';
-        targetLine = '<div style="font-size:0.85em; color:#696969; margin-top:4px;">' + targetEmoji + ' ' + targetRendered + ' vs target</div>';
-      }
-
-      var ppLine = '';
+           var ppLine = '';
       if (ppField) {
         var ppValue    = row[ppField.name].value;
         var ppRendered = row[ppField.name].rendered || (ppValue * 100).toFixed(1) + '%';
@@ -42,6 +34,14 @@ looker.plugins.visualizations.add({
           ? '<span style="color:green;">▲</span>'
           : '<span style="color:red;">▼</span>';
         ppLine = '<div style="font-size:0.85em; color:#696969; margin-top:2px;">' + ppArrow + ' ' + ppRendered + ' vs prev. period</div>';
+      }
+
+       var targetLine = '';
+      if (targetField) {
+        var targetValue    = row[targetField.name].value;
+        var targetRendered = row[targetField.name].rendered || (targetValue * 100).toFixed(1) + '%';
+        var targetEmoji    = targetValue > 0.95 ? '🟢' : targetValue > 0.90 ? '🟡' : '🔴';
+        targetLine = '<div style="font-size:0.85em; color:#696969; margin-top:4px;">' + targetEmoji + ' ' + targetRendered + ' vs target</div>';
       }
 
       var container = document.getElementById('kpi-container');
