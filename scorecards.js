@@ -8,7 +8,6 @@ looker.plugins.visualizations.add({
       var row       = data[0];
       var fields    = queryResponse.fields;
       var allFields = fields.measures.concat(fields.dimensions);
-
       var mainField   = allFields[0];
       var targetField = allFields[1];
       var ppField     = allFields[2];
@@ -16,28 +15,39 @@ looker.plugins.visualizations.add({
       var mainValue   = row[mainField.name].rendered || row[mainField.name].value;
       var targetValue = row[targetField.name].value;
       var ppValue     = row[ppField.name].value;
+
       console.log("KPI VIZ: main field links", JSON.stringify(row[mainField.name]));
 
-      var targetRendered = row[targetField.name].rendered || (targetValue * 100).toFixed(1) + '%';
-      var ppRendered     = row[ppField.name].rendered    || (ppValue * 100).toFixed(1) + '%';
+      // Build target line only if value is non-null and non-zero
+      var targetLine = '';
+      if (targetValue !== null && targetValue !== 0) {
+        var targetRendered = row[targetField.name].rendered || (targetValue * 100).toFixed(1) + '%';
+        var targetEmoji = targetValue > 0.95 ? '🟢' : targetValue > 0.90 ? '🟡' : '🔴';
+        targetLine = `
+          <div style="font-size:0.85em; color:#696969; margin-top:4px;">
+            ${targetEmoji} ${targetRendered} vs target
+          </div>`;
+      }
 
-      var targetEmoji = targetValue > 0.95 ? '🟢' : targetValue > 0.90 ? '🟡' : '🔴';
-
-      var ppArrow = ppValue >= 0
-        ? '<span style="color:green;">▲</span>'
-        : '<span style="color:red;">▼</span>';
+      // Build prev period line only if value is non-null and non-zero
+      var ppLine = '';
+      if (ppValue !== null && ppValue !== 0) {
+        var ppRendered = row[ppField.name].rendered || (ppValue * 100).toFixed(1) + '%';
+        var ppArrow = ppValue >= 0
+          ? '<span style="color:green;">▲</span>'
+          : '<span style="color:red;">▼</span>';
+        ppLine = `
+          <div style="font-size:0.85em; color:#696969; margin-top:2px;">
+            ${ppArrow} ${ppRendered} vs prev. period
+          </div>`;
+      }
 
       var container = document.getElementById('kpi-container');
-
       container.innerHTML = `
         <div style="text-align:center; font-family: 'Google Sans', 'Roboto', sans-serif;">
           <div id="kpi-main-value" style="font-size:2.5em; font-weight:600; color:#282828; cursor:pointer;">${mainValue}</div>
-          <div style="font-size:0.85em; color:#696969; margin-top:4px;">
-            ${targetEmoji} ${targetRendered} vs target
-          </div>
-          <div style="font-size:0.85em; color:#696969; margin-top:2px;">
-            ${ppArrow} ${ppRendered} vs prev. period
-          </div>
+          ${targetLine}
+          ${ppLine}
         </div>
       `;
 
@@ -50,11 +60,9 @@ looker.plugins.visualizations.add({
           });
         });
       }
-
     } catch(e) {
       console.error("KPI VIZ ERROR:", e);
     }
-
     done();
   }
 });
