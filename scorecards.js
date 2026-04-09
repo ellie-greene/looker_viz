@@ -7,30 +7,29 @@ looker.plugins.visualizations.add({
     try {
       console.log("KPI VIZ: data length", data && data.length);
       console.log("KPI VIZ: fields keys", queryResponse && queryResponse.fields && Object.keys(queryResponse.fields));
-
       if (!data || data.length === 0) { done(); return; }
-
       var row    = data[0];
       var fields = queryResponse.fields;
       var allFields = (fields.measures || [])
         .concat(fields.dimensions || [])
         .concat(fields.table_calculations || []);
-
       console.log("KPI VIZ: allFields count", allFields.length, allFields.map(function(f){ return f.name; }));
-
       if (allFields.length === 0) { done(); return; }
 
-      var mainField   = allFields[0];
-var targetField = allFields.find(function(f) {
-  return f.name.toLowerCase().includes('target') || (f.label_short || f.label || '').toLowerCase().includes('target');
-}) || null;
-var ppField = allFields.find(function(f) {
-  return f.name.toLowerCase().includes('pp_perc') || (f.label_short || f.label || '').toLowerCase().includes('pp_perc');
-}) || null;
+      var mainField = allFields[0];
+      var targetField = allFields.find(function(f) {
+        return f.name.toLowerCase().includes('target') || (f.label_short || f.label || '').toLowerCase().includes('target');
+      }) || null;
+      var ppField = allFields.find(function(f) {
+        return f.name.toLowerCase().includes('pp_perc') || (f.label_short || f.label || '').toLowerCase().includes('pp_perc');
+      }) || null;
+      var m0Field = allFields.find(function(f) {
+        return f.name.toLowerCase().includes('m0');
+      }) || null;
 
       var mainValue = row[mainField.name].rendered || row[mainField.name].value;
 
-           var ppLine = '';
+      var ppLine = '';
       if (ppField) {
         var ppValue    = row[ppField.name].value;
         var ppRendered = row[ppField.name].rendered || (ppValue * 100).toFixed(1) + '%';
@@ -40,12 +39,18 @@ var ppField = allFields.find(function(f) {
         ppLine = '<div style="font-size:0.85em; color:#696969; margin-top:2px;">' + ppArrow + ' ' + ppRendered + ' vs prev. period</div>';
       }
 
-       var targetLine = '';
+      var targetLine = '';
       if (targetField) {
         var targetValue    = row[targetField.name].value;
         var targetRendered = row[targetField.name].rendered || (targetValue * 100).toFixed(1) + '%';
         var targetEmoji    = targetValue > 0.95 ? '🟢' : targetValue > 0.90 ? '🟡' : '🔴';
         targetLine = '<div style="font-size:0.85em; color:#696969; margin-top:4px;">' + targetEmoji + ' ' + targetRendered + ' vs target</div>';
+      }
+
+      var m0Line = '';
+      if (m0Field) {
+        var m0Value = row[m0Field.name].rendered || row[m0Field.name].value;
+        m0Line = '<div style="font-size:0.85em; color:#696969; margin-top:4px;">M0 starts: ' + m0Value + '</div>';
       }
 
       var container = document.getElementById('kpi-container');
@@ -54,6 +59,7 @@ var ppField = allFields.find(function(f) {
           '<div id="kpi-main-value" style="font-size:2.5em; font-weight:600; color:#282828; cursor:pointer;">' + mainValue + '</div>' +
           targetLine +
           ppLine +
+          m0Line +
         '</div>';
 
       var drillLinks = row[mainField.name].links;
