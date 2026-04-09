@@ -50,7 +50,7 @@ looker.plugins.visualizations.add({
       var m0Line = '';
       if (m0Field) {
         var m0Value = row[m0Field.name].rendered || row[m0Field.name].value;
-        m0Line = '<div style="font-size:0.85em; color:#696969; margin-top:4px;">M0 starts: ' + m0Value + '</div>';
+        m0Line = '<div style="font-size:0.85em; color:#696969; margin-top:4px;">M numbers start from order ' + m0Value + '</div>';
       }
 
       var container = document.getElementById('kpi-container');
