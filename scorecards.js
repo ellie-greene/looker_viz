@@ -21,8 +21,12 @@ looker.plugins.visualizations.add({
       if (allFields.length === 0) { done(); return; }
 
       var mainField   = allFields[0];
-      var targetField = allFields[1] || null;
-      var ppField     = allFields[2] || null;
+var targetField = allFields.find(function(f) {
+  return f.name.toLowerCase().includes('target') || (f.label_short || f.label || '').toLowerCase().includes('target');
+}) || null;
+var ppField = allFields.find(function(f) {
+  return f.name.toLowerCase().includes('pp_perc') || (f.label_short || f.label || '').toLowerCase().includes('pp_perc');
+}) || null;
 
       var mainValue = row[mainField.name].rendered || row[mainField.name].value;
 
