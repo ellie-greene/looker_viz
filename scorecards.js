@@ -50,16 +50,16 @@ looker.plugins.visualizations.add({
       var m0Line = '';
       if (m0Field) {
         var m0Value = row[m0Field.name].rendered || row[m0Field.name].value;
-        m0Line = '<div style="font-size:0.85em; color:#696969; margin-top:4px;">M numbers start from order ' + m0Value + '</div>';
+        m0Line = '<div style="font-size:0.75em; color:#696969; margin-top:4px;">M0 starts: ' + m0Value + '</div>';
       }
 
       var container = document.getElementById('kpi-container');
       container.innerHTML =
         '<div style="text-align:center; font-family: Google Sans, Roboto, sans-serif;">' +
           '<div id="kpi-main-value" style="font-size:2.5em; font-weight:600; color:#282828; cursor:pointer;">' + mainValue + '</div>' +
+          m0Line +
           targetLine +
           ppLine +
-          m0Line +
         '</div>';
 
       var drillLinks = row[mainField.name].links;
