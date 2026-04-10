@@ -41,13 +41,11 @@ looker.plugins.visualizations.add({
         var targetRendered = row[targetField.name].rendered || (targetValue * 100).toFixed(1) + '%';
         var isLowGood = targetField.name.toLowerCase().includes('_low_');
         var targetEmoji;
-        if (isLowGood) {
-          // high value = bad: >1.05 red, >1 yellow, else green
-          targetEmoji = targetValue >= 1.05 ? '🔴' : targetValue >= 1 ? '🟡' : '🟢';
-        } else {
-          // high value = good (default): >=1 green, >=0.95 yellow, else red
-          targetEmoji = targetValue >= 1 ? '🟢' : targetValue >= 0.95 ? '🟡' : '🔴';
-        }
+       if (isLowGood) {
+  targetEmoji = targetValue > 0 ? '🔴' : targetValue > -0.05 ? '🟡' : '🟢';
+} else {
+  targetEmoji = targetValue >= 0 ? '🟢' : targetValue >= -0.05 ? '🟡' : '🔴';
+}
         targetLine = '<div style="font-size:0.85em; color:#696969; margin-top:4px;">' + targetEmoji + ' ' + targetRendered + ' vs target</div>';
       }
       var m0Line = '';
