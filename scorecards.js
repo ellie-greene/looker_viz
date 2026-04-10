@@ -15,7 +15,6 @@ looker.plugins.visualizations.add({
         .concat(fields.table_calculations || []);
       console.log("KPI VIZ: allFields count", allFields.length, allFields.map(function(f){ return f.name; }));
       if (allFields.length === 0) { done(); return; }
-
       var mainField = allFields[0];
       var targetField = allFields.find(function(f) {
         return f.name.toLowerCase().includes('target') || (f.label_short || f.label || '').toLowerCase().includes('target');
@@ -26,9 +25,7 @@ looker.plugins.visualizations.add({
       var m0Field = allFields.find(function(f) {
         return f.name.toLowerCase().includes('m0');
       }) || null;
-
       var mainValue = row[mainField.name].rendered || row[mainField.name].value;
-
       var ppLine = '';
       if (ppField) {
         var ppValue    = row[ppField.name].value;
@@ -38,21 +35,26 @@ looker.plugins.visualizations.add({
           : '<span style="color:red;">▼</span>';
         ppLine = '<div style="font-size:0.85em; color:#696969; margin-top:2px;">' + ppArrow + ' ' + ppRendered + ' vs prev. period</div>';
       }
-
       var targetLine = '';
       if (targetField) {
         var targetValue    = row[targetField.name].value;
         var targetRendered = row[targetField.name].rendered || (targetValue * 100).toFixed(1) + '%';
-        var targetEmoji    = targetValue > 0.95 ? '🟢' : targetValue > 0.90 ? '🟡' : '🔴';
+        var isLowGood = targetField.name.toLowerCase().includes('_low_');
+        var targetEmoji;
+        if (isLowGood) {
+          // high value = bad: >1 red, >0.95 yellow, else green
+          targetEmoji = targetValue > 1 ? '🔴' : targetValue > 0.95 ? '🟡' : '🟢';
+        } else {
+          // high value = good (default): >=1 green, >=0.95 yellow, else red
+          targetEmoji = targetValue >= 1 ? '🟢' : targetValue >= 0.95 ? '🟡' : '🔴';
+        }
         targetLine = '<div style="font-size:0.85em; color:#696969; margin-top:4px;">' + targetEmoji + ' ' + targetRendered + ' vs target</div>';
       }
-
       var m0Line = '';
       if (m0Field) {
         var m0Value = row[m0Field.name].rendered || row[m0Field.name].value;
         m0Line = '<div style="font-size:0.75em; color:#696969; margin-top:4px;">Starting from order ' + m0Value + '</div>';
       }
-
       var container = document.getElementById('kpi-container');
       container.innerHTML =
         '<div style="text-align:center; font-family: Google Sans, Roboto, sans-serif;">' +
@@ -61,7 +63,6 @@ looker.plugins.visualizations.add({
           targetLine +
           ppLine +
         '</div>';
-
       var drillLinks = row[mainField.name].links;
       if (drillLinks && drillLinks.length > 0) {
         document.getElementById('kpi-main-value').addEventListener('click', function(e) {
