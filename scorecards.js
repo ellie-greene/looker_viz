@@ -42,7 +42,7 @@ looker.plugins.visualizations.add({
         var isLowGood = targetField.name.toLowerCase().includes('_low_');
         var targetEmoji;
        if (isLowGood) {
-  targetEmoji = targetValue > 0 ? '🔴' : targetValue > -0.05 ? '🟡' : '🟢';
+  targetEmoji = targetValue < 0 ? '🟢' : targetValue <= 0.05 ? '🟡' : '🔴';
 } else {
   targetEmoji = targetValue >= 0 ? '🟢' : targetValue >= -0.05 ? '🟡' : '🔴';
 }
