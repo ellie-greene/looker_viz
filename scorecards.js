@@ -52,12 +52,16 @@ looker.plugins.visualizations.add({
         } else {
           targetEmoji = targetActualValue > 0 ? '🟢' : targetActualValue === 0 ? '🟡' : '🔴';
         }
+        var isPercMetric = targetActualField.name.toLowerCase().includes('_perc');
+        var vsTargetLabel = isPercMetric
+          ? targetActualRendered + '% point(s) vs target'
+          : targetActualRendered + ' vs target';
         var tooltipAttr = '';
         if (targetPercField) {
           var targetPercRendered = row[targetPercField.name].rendered || row[targetPercField.name].value;
           tooltipAttr = ' title="' + targetPercRendered + ' vs target"';
         }
-        targetLine = '<div style="font-size:0.85em; color:#696969; margin-top:4px; cursor:' + (targetPercField ? 'help' : 'default') + ';"' + tooltipAttr + '>' + targetEmoji + ' ' + targetActualRendered + ' vs target</div>';
+        targetLine = '<div style="font-size:0.85em; color:#696969; margin-top:4px; cursor:' + (targetPercField ? 'help' : 'default') + ';"' + tooltipAttr + '>' + targetEmoji + ' ' + vsTargetLabel + '</div>';
       }
       var m0Line = '';
       if (m0Field) {
