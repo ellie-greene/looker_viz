@@ -20,10 +20,10 @@ looker.plugins.visualizations.add({
         return f.name.toLowerCase().includes('target_actual') || (f.label_short || f.label || '').toLowerCase().includes('target_actual');
       }) || null;
       var targetPercField = allFields.find(function(f) {
-  var name = f.name.toLowerCase();
-  return (name.includes('target_perc') && !name.includes('target_actual')) || 
-         (f.label_short || f.label || '').toLowerCase().includes('target_perc');
-}) || null;
+        var name = f.name.toLowerCase();
+        return (name.includes('target_perc') && !name.includes('target_actual')) ||
+               (f.label_short || f.label || '').toLowerCase().includes('target_perc');
+      }) || null;
       var ppField = allFields.find(function(f) {
         return f.name.toLowerCase().includes('pp_perc') || (f.label_short || f.label || '').toLowerCase().includes('pp_perc');
       }) || null;
@@ -46,7 +46,9 @@ looker.plugins.visualizations.add({
       var targetLine = '';
       if (targetActualField) {
         var targetActualValue    = row[targetActualField.name].value;
-        var targetActualRendered = row[targetActualField.name].rendered || targetActualValue;
+        var targetActualRendered = row[targetActualField.name].rendered != null
+          ? (targetActualValue >= 0 ? '+' : '') + row[targetActualField.name].rendered
+          : (targetActualValue >= 0 ? '+' : '') + row[targetActualField.name].value;
         var isLowGood = targetActualField.name.toLowerCase().includes('_low_');
         var targetEmoji;
         if (isLowGood) {
@@ -55,9 +57,9 @@ looker.plugins.visualizations.add({
           targetEmoji = targetActualValue > 0 ? '🟢' : targetActualValue === 0 ? '🟡' : '🔴';
         }
         var isPercMetric = targetActualField.name.toLowerCase().includes('_perc');
-    var vsTargetLabel = isPercMetric
-  ? targetActualRendered + '% ' + (Math.abs(targetActualValue) === 1 ? 'point' : 'points') + ' vs target'
-  : targetActualRendered + ' vs target';
+        var vsTargetLabel = isPercMetric
+          ? targetActualRendered + '% ' + (Math.abs(targetActualValue) === 1 ? 'point' : 'points') + ' vs target'
+          : targetActualRendered + ' vs target';
         var tooltipAttr = '';
         if (targetPercField) {
           var targetPercRendered = row[targetPercField.name].rendered || row[targetPercField.name].value;
