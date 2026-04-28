@@ -55,9 +55,9 @@ looker.plugins.visualizations.add({
           targetEmoji = targetActualValue > 0 ? '🟢' : targetActualValue === 0 ? '🟡' : '🔴';
         }
         var isPercMetric = targetActualField.name.toLowerCase().includes('_perc');
-        var vsTargetLabel = isPercMetric
-          ? targetActualRendered + '% point(s) vs target'
-          : targetActualRendered + ' vs target';
+    var vsTargetLabel = isPercMetric
+  ? targetActualRendered + '% ' + (Math.abs(targetActualValue) === 1 ? 'point' : 'points') + ' vs target'
+  : targetActualRendered + ' vs target';
         var tooltipAttr = '';
         if (targetPercField) {
           var targetPercRendered = row[targetPercField.name].rendered || row[targetPercField.name].value;
