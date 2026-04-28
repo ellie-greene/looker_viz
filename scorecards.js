@@ -16,11 +16,11 @@ looker.plugins.visualizations.add({
       console.log("KPI VIZ: allFields count", allFields.length, allFields.map(function(f){ return f.name; }));
       if (allFields.length === 0) { done(); return; }
       var mainField = allFields[0];
-      var targetField = allFields.find(function(f) {
-        return f.name.toLowerCase().includes('target_perc') || (f.label_short || f.label || '').toLowerCase().includes('target_perc');
-      }) || null;
       var targetActualField = allFields.find(function(f) {
         return f.name.toLowerCase().includes('target_actual') || (f.label_short || f.label || '').toLowerCase().includes('target_actual');
+      }) || null;
+      var targetPercField = allFields.find(function(f) {
+        return f.name.toLowerCase().includes('target_perc') || (f.label_short || f.label || '').toLowerCase().includes('target_perc');
       }) || null;
       var ppField = allFields.find(function(f) {
         return f.name.toLowerCase().includes('pp_perc') || (f.label_short || f.label || '').toLowerCase().includes('pp_perc');
@@ -42,22 +42,22 @@ looker.plugins.visualizations.add({
         ppLine = '<div style="font-size:0.85em; color:#696969; margin-top:2px;">' + ppArrow + ' ' + ppRendered + ' vs prev. period</div>';
       }
       var targetLine = '';
-      if (targetField) {
-        var targetValue    = row[targetField.name].value;
-        var targetRendered = row[targetField.name].rendered || targetValue;
-        var isLowGood = targetField.name.toLowerCase().includes('_low_');
+      if (targetActualField) {
+        var targetActualValue    = row[targetActualField.name].value;
+        var targetActualRendered = row[targetActualField.name].rendered || targetActualValue;
+        var isLowGood = targetActualField.name.toLowerCase().includes('_low_');
         var targetEmoji;
         if (isLowGood) {
-          targetEmoji = targetValue < 0 ? '🟢' : targetValue <= 0.05 ? '🟡' : '🔴';
+          targetEmoji = targetActualValue < 0 ? '🟢' : targetActualValue === 0 ? '🟡' : '🔴';
         } else {
-          targetEmoji = targetValue >= 0 ? '🟢' : targetValue >= -0.05 ? '🟡' : '🔴';
+          targetEmoji = targetActualValue > 0 ? '🟢' : targetActualValue === 0 ? '🟡' : '🔴';
         }
         var tooltipAttr = '';
-        if (targetActualField) {
-          var actualRendered = row[targetActualField.name].rendered || row[targetActualField.name].value;
-          tooltipAttr = ' title="Actual: ' + actualRendered + '"';
+        if (targetPercField) {
+          var targetPercRendered = row[targetPercField.name].rendered || row[targetPercField.name].value;
+          tooltipAttr = ' title="' + targetPercRendered + ' vs target"';
         }
-        targetLine = '<div style="font-size:0.85em; color:#696969; margin-top:4px; cursor:' + (targetActualField ? 'help' : 'default') + ';"' + tooltipAttr + '>' + targetEmoji + ' ' + targetRendered + ' vs target</div>';
+        targetLine = '<div style="font-size:0.85em; color:#696969; margin-top:4px; cursor:' + (targetPercField ? 'help' : 'default') + ';"' + tooltipAttr + '>' + targetEmoji + ' ' + targetActualRendered + ' vs target</div>';
       }
       var m0Line = '';
       if (m0Field) {
