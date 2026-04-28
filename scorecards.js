@@ -20,8 +20,10 @@ looker.plugins.visualizations.add({
         return f.name.toLowerCase().includes('target_actual') || (f.label_short || f.label || '').toLowerCase().includes('target_actual');
       }) || null;
       var targetPercField = allFields.find(function(f) {
-        return f.name.toLowerCase().includes('target_perc') || (f.label_short || f.label || '').toLowerCase().includes('target_perc');
-      }) || null;
+  var name = f.name.toLowerCase();
+  return (name.includes('target_perc') && !name.includes('target_actual')) || 
+         (f.label_short || f.label || '').toLowerCase().includes('target_perc');
+}) || null;
       var ppField = allFields.find(function(f) {
         return f.name.toLowerCase().includes('pp_perc') || (f.label_short || f.label || '').toLowerCase().includes('pp_perc');
       }) || null;
