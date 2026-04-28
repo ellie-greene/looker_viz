@@ -58,7 +58,7 @@ looker.plugins.visualizations.add({
         }
         var isPercMetric = targetActualField.name.toLowerCase().includes('_perc');
         var vsTargetLabel = isPercMetric
-          ? targetActualRendered + '% ' + (Math.abs(targetActualValue) === 1 ? 'point' : 'points') + ' vs target'
+          ? targetActualRendered + '% points vs target'
           : targetActualRendered + ' vs target';
         var tooltipAttr = '';
         if (targetPercField) {
