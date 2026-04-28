@@ -48,12 +48,16 @@ looker.plugins.visualizations.add({
         var ppArrow = ppActualValue >= 0
           ? '<span style="color:green;">▲</span>'
           : '<span style="color:red;">▼</span>';
+        var isPpPercMetric = ppActualField.name.toLowerCase().includes('_perc');
+        var ppActualLabel = isPpPercMetric
+          ? ppActualRendered + '%p vs prev. period'
+          : ppActualRendered + ' vs prev. period';
         var ppTooltipAttr = '';
         if (ppPercField) {
           var ppPercRendered = row[ppPercField.name].rendered || row[ppPercField.name].value;
           ppTooltipAttr = ' title="' + ppPercRendered + ' difference vs prev. period"';
         }
-        ppLine = '<div style="font-size:0.85em; color:#696969; margin-top:2px; cursor:' + (ppPercField ? 'help' : 'default') + ';"' + ppTooltipAttr + '>' + ppArrow + ' ' + ppActualRendered + 'p vs prev. period</div>';
+        ppLine = '<div style="font-size:0.85em; color:#696969; margin-top:2px; cursor:' + (ppPercField ? 'help' : 'default') + ';"' + ppTooltipAttr + '>' + ppArrow + ' ' + ppActualLabel + '</div>';
       }
       var targetLine = '';
       if (targetActualField) {
