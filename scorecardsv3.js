@@ -62,11 +62,12 @@ looker.plugins.visualizations.add({
           ? (targetActualValue >= 0 ? '+' : '') + row[targetActualField.name].rendered
           : (targetActualValue >= 0 ? '+' : '') + row[targetActualField.name].value;
         var isLowGood = targetActualField.name.toLowerCase().includes('_low_');
+        var emojiValue = targetPercField ? row[targetPercField.name].value : (targetActualValue >= 0 ? 1 : -1);
         var targetEmoji;
         if (isLowGood) {
-          targetEmoji = targetActualValue < 0 ? '🟢' : targetActualValue === 0 ? '🟡' : '🔴';
+          targetEmoji = emojiValue < 0 ? '🟢' : emojiValue <= 0.05 ? '🟡' : '🔴';
         } else {
-          targetEmoji = targetActualValue > 0 ? '🟢' : targetActualValue === 0 ? '🟡' : '🔴';
+          targetEmoji = emojiValue >= 0 ? '🟢' : emojiValue >= -0.05 ? '🟡' : '🔴';
         }
         var isPercMetric = targetActualField.name.toLowerCase().includes('_perc');
         var vsTargetLabel = isPercMetric
