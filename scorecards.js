@@ -59,7 +59,7 @@ looker.plugins.visualizations.add({
         var tooltipAttr = '';
         if (targetPercField) {
           var targetPercRendered = row[targetPercField.name].rendered || row[targetPercField.name].value;
-          tooltipAttr = ' title="' + targetPercRendered + ' vs target"';
+          tooltipAttr = ' title="' + targetPercRendered + ' % difference vs target"';
         }
         targetLine = '<div style="font-size:0.85em; color:#696969; margin-top:4px; cursor:' + (targetPercField ? 'help' : 'default') + ';"' + tooltipAttr + '>' + targetEmoji + ' ' + vsTargetLabel + '</div>';
       }
