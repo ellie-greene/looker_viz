@@ -53,7 +53,7 @@ looker.plugins.visualizations.add({
           var ppPercRendered = row[ppPercField.name].rendered || row[ppPercField.name].value;
           ppTooltipAttr = ' title="' + ppPercRendered + ' difference vs prev. period"';
         }
-        ppLine = '<div style="font-size:0.85em; color:#696969; margin-top:2px; cursor:' + (ppPercField ? 'help' : 'default') + ';"' + ppTooltipAttr + '>' + ppArrow + ' ' + ppActualRendered + ' vs prev. period</div>';
+        ppLine = '<div style="font-size:0.85em; color:#696969; margin-top:2px; cursor:' + (ppPercField ? 'help' : 'default') + ';"' + ppTooltipAttr + '>' + ppArrow + ' ' + ppActualRendered + 'p vs prev. period</div>';
       }
       var targetLine = '';
       if (targetActualField) {
@@ -71,7 +71,7 @@ looker.plugins.visualizations.add({
         }
         var isPercMetric = targetActualField.name.toLowerCase().includes('_perc');
         var vsTargetLabel = isPercMetric
-          ? targetActualRendered + '% ' + (Math.abs(targetActualValue) === 1 ? 'point' : 'points') + ' vs target'
+          ? targetActualRendered + '%p vs target'
           : targetActualRendered + ' vs target';
         var tooltipAttr = '';
         if (targetPercField) {
