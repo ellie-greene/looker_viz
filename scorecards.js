@@ -17,7 +17,10 @@ looker.plugins.visualizations.add({
       if (allFields.length === 0) { done(); return; }
       var mainField = allFields[0];
       var targetField = allFields.find(function(f) {
-        return f.name.toLowerCase().includes('target') || (f.label_short || f.label || '').toLowerCase().includes('target');
+        return f.name.toLowerCase().includes('target_perc') || (f.label_short || f.label || '').toLowerCase().includes('target_perc');
+      }) || null;
+      var targetActualField = allFields.find(function(f) {
+        return f.name.toLowerCase().includes('target_actual') || (f.label_short || f.label || '').toLowerCase().includes('target_actual');
       }) || null;
       var ppField = allFields.find(function(f) {
         return f.name.toLowerCase().includes('pp_perc') || (f.label_short || f.label || '').toLowerCase().includes('pp_perc');
@@ -41,7 +44,7 @@ looker.plugins.visualizations.add({
       var targetLine = '';
       if (targetField) {
         var targetValue    = row[targetField.name].value;
-        var targetRendered = row[targetField.name].rendered || (targetValue * 100).toFixed(1) + '%';
+        var targetRendered = row[targetField.name].rendered || targetValue;
         var isLowGood = targetField.name.toLowerCase().includes('_low_');
         var targetEmoji;
         if (isLowGood) {
@@ -49,7 +52,12 @@ looker.plugins.visualizations.add({
         } else {
           targetEmoji = targetValue >= 0 ? '🟢' : targetValue >= -0.05 ? '🟡' : '🔴';
         }
-        targetLine = '<div style="font-size:0.85em; color:#696969; margin-top:4px;">' + targetEmoji + ' ' + targetRendered + ' vs target</div>';
+        var tooltipAttr = '';
+        if (targetActualField) {
+          var actualRendered = row[targetActualField.name].rendered || row[targetActualField.name].value;
+          tooltipAttr = ' title="Actual: ' + actualRendered + '"';
+        }
+        targetLine = '<div style="font-size:0.85em; color:#696969; margin-top:4px; cursor:' + (targetActualField ? 'help' : 'default') + ';"' + tooltipAttr + '>' + targetEmoji + ' ' + targetRendered + ' vs target</div>';
       }
       var m0Line = '';
       if (m0Field) {
