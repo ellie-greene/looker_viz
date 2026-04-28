@@ -16,8 +16,13 @@ looker.plugins.visualizations.add({
       console.log("KPI VIZ: allFields count", allFields.length, allFields.map(function(f){ return f.name; }));
       if (allFields.length === 0) { done(); return; }
       var mainField = allFields[0];
-      var targetField = allFields.find(function(f) {
-        return f.name.toLowerCase().includes('target') || (f.label_short || f.label || '').toLowerCase().includes('target');
+      var targetActualField = allFields.find(function(f) {
+        return f.name.toLowerCase().includes('target_actual') || (f.label_short || f.label || '').toLowerCase().includes('target_actual');
+      }) || null;
+      var targetPercField = allFields.find(function(f) {
+        var name = f.name.toLowerCase();
+        return (name.includes('target_perc') && !name.includes('target_actual')) ||
+               (f.label_short || f.label || '').toLowerCase().includes('target_perc');
       }) || null;
       var ppField = allFields.find(function(f) {
         return f.name.toLowerCase().includes('pp_perc') || (f.label_short || f.label || '').toLowerCase().includes('pp_perc');
@@ -39,17 +44,28 @@ looker.plugins.visualizations.add({
         ppLine = '<div style="font-size:0.85em; color:#696969; margin-top:2px;">' + ppArrow + ' ' + ppRendered + ' vs prev. period</div>';
       }
       var targetLine = '';
-      if (targetField) {
-        var targetValue    = row[targetField.name].value;
-        var targetRendered = row[targetField.name].rendered || (targetValue * 100).toFixed(1) + '%';
-        var isLowGood = targetField.name.toLowerCase().includes('_low_');
+      if (targetActualField) {
+        var targetActualValue    = row[targetActualField.name].value;
+        var targetActualRendered = row[targetActualField.name].rendered != null
+          ? (targetActualValue >= 0 ? '+' : '') + row[targetActualField.name].rendered
+          : (targetActualValue >= 0 ? '+' : '') + row[targetActualField.name].value;
+        var isLowGood = targetActualField.name.toLowerCase().includes('_low_');
         var targetEmoji;
         if (isLowGood) {
-          targetEmoji = targetValue < 0 ? '🟢' : targetValue <= 0.05 ? '🟡' : '🔴';
+          targetEmoji = targetActualValue < 0 ? '🟢' : targetActualValue === 0 ? '🟡' : '🔴';
         } else {
-          targetEmoji = targetValue >= 0 ? '🟢' : targetValue >= -0.05 ? '🟡' : '🔴';
+          targetEmoji = targetActualValue > 0 ? '🟢' : targetActualValue === 0 ? '🟡' : '🔴';
         }
-        targetLine = '<div style="font-size:0.85em; color:#696969; margin-top:4px;">' + targetEmoji + ' ' + targetRendered + ' vs target</div>';
+        var isPercMetric = targetActualField.name.toLowerCase().includes('_perc');
+        var vsTargetLabel = isPercMetric
+           ? targetActualRendered + '% ' + (Math.abs(targetActualValue) === 1 ? 'point' : 'points') + ' vs target'
+          : targetActualRendered + ' vs target';
+        var tooltipAttr = '';
+        if (targetPercField) {
+          var targetPercRendered = row[targetPercField.name].rendered || row[targetPercField.name].value;
+          tooltipAttr = ' title="' + targetPercRendered + ' difference vs target"';
+        }
+        targetLine = '<div style="font-size:0.85em; color:#696969; margin-top:4px; cursor:' + (targetPercField ? 'help' : 'default') + ';"' + tooltipAttr + '>' + targetEmoji + ' ' + vsTargetLabel + '</div>';
       }
       var m0Line = '';
       if (m0Field) {
