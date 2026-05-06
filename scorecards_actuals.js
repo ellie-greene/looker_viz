@@ -30,11 +30,8 @@ looker.plugins.visualizations.add({
         return (name.includes('pp_perc') && !name.includes('pp_actual')) ||
                (f.label_short || f.label || '').toLowerCase().includes('pp_perc');
       }) || null;
-      var m0Field = allFields.find(function(f) {
-        return f.name.toLowerCase().includes('m0');
-      }) || null;
-      var daysField = allFields.find(function(f) {
-        return f.name.toLowerCase().includes('days_to_become_active_subtitle');
+      var subtitleField = allFields.find(function(f) {
+        return f.name.toLowerCase().includes('_subtitle');
       }) || null;
       var linkField = allFields.find(function(f) {
         return f.name.toLowerCase().includes('_link');
@@ -89,16 +86,11 @@ looker.plugins.visualizations.add({
         targetLine = '<div style="font-size:0.85em; color:#696969; margin-top:4px; cursor:' + (targetPercField ? 'help' : 'default') + ';"' + tooltipAttr + '>' + targetEmoji + ' ' + vsTargetLabel + '</div>';
       }
 
-      var m0Line = '';
-      if (m0Field) {
-        var m0Value = row[m0Field.name].rendered || row[m0Field.name].value;
-        m0Line = '<div style="font-size:0.75em; color:#696969; margin-top:4px;">Starting from order ' + m0Value + '</div>';
-      }
-
-      var daysLine = '';
-      if (daysField) {
-        var daysValue = row[daysField.name].rendered || row[daysField.name].value;
-        daysLine = '<div style="font-size:0.75em; color:#696969; margin-top:4px;">Days to convert: ' + daysValue + '</div>';
+      var subtitleLine = '';
+      if (subtitleField) {
+        var subtitleValue = row[subtitleField.name].rendered || row[subtitleField.name].value;
+        var subtitleLabel = (subtitleField.label_short || subtitleField.label || '').replace(/_subtitle$/i, '').trim();
+        subtitleLine = '<div style="font-size:0.75em; color:#696969; margin-top:4px;">' + subtitleLabel + ': ' + subtitleValue + '</div>';
       }
 
       var linkIcon = '';
@@ -113,8 +105,7 @@ looker.plugins.visualizations.add({
       container.innerHTML =
         '<div style="text-align:center; font-family: Google Sans, Roboto, sans-serif;">' +
           '<div style="font-size:2.5em; font-weight:600; color:#282828;">' + mainValue + '</div>' +
-          m0Line +
-          daysLine +
+          subtitleLine +
           targetLine +
           ppLine +
           linkIcon +
