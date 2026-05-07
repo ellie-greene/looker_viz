@@ -139,7 +139,7 @@ const eventCalendarViz = {
         }
       });
  
-      const sortedYears = Array.from(years).sort();
+      const sortedYears = Array.from(years).sort((a, b) => Number(b) - Number(a));
       const activeMths = Object.keys(monthSortMap).sort((a, b) => monthSortMap[a] - monthSortMap[b]);
  
       const table = document.createElement("table");
