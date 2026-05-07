@@ -7,19 +7,11 @@ const eventCalendarViz = {
       label: "Lower is better (e.g. CPA)",
       default: false,
       section: "Style"
-    },
-    main_label: {
-      type: "string",
-      label: "Main metric label",
-      default: "",
-      placeholder: "Auto-detected from field",
-      section: "Style"
     }
   },
  
   create: function(element, config) {
     element.innerHTML = "";
- 
     const style = document.createElement("style");
     style.textContent = `
       .ecv-wrap { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 12px; overflow-x: auto; }
@@ -38,10 +30,8 @@ const eventCalendarViz = {
       .ecv-neg { color: #c0392b; }
       .ecv-neu { color: #aaa; }
       .ecv-null { color: #ccc; font-size: 12px; }
-      .ecv-title { font-size: 11px; font-weight: 500; color: #888; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
     `;
     element.appendChild(style);
- 
     const wrap = document.createElement("div");
     wrap.className = "ecv-wrap";
     element.appendChild(wrap);
@@ -53,52 +43,33 @@ const eventCalendarViz = {
     wrap.innerHTML = "";
  
     const fields = queryResponse.fields;
-    const allFields = [
-      ...(fields.dimensions || []),
-      ...(fields.measures || [])
-    ];
+    const allFields = [...(fields.dimensions || []), ...(fields.measures || [])];
  
-    // Find year and month dimensions
     const yearField = allFields.find(f =>
-      f.name.toLowerCase().includes("year") ||
-      f.label_short?.toLowerCase().includes("year")
+      (f.label_short || f.label || f.name).toLowerCase().includes("year")
     );
-    const monthField = allFields.find(f =>
-      f.name.toLowerCase().includes("month") &&
-      !f.name.toLowerCase().includes("year")
-    );
- 
-    // Find measure pairs: current + _pp
-    const measures = fields.measures || [];
-    const currentMeasures = measures.filter(f => !f.name.toLowerCase().includes("_pp"));
-    const ppMeasures = measures.filter(f => f.name.toLowerCase().includes("_pp") && !f.name.toLowerCase().includes("_perc") && !f.name.toLowerCase().includes("_actual"));
- 
-    // Build measure options: pair current with matching _pp
-    const pairs = currentMeasures.map(cm => {
-      const baseName = cm.name;
-      const pp = ppMeasures.find(p => p.name === baseName + "_pp" || p.name.replace("_pp","") === baseName);
-      return { label: cm.label_short || cm.label || cm.name, current: cm, pp: pp || null };
+    const monthField = allFields.find(f => {
+      const l = (f.label_short || f.label || f.name).toLowerCase();
+      return l.includes("month") && !l.includes("year");
     });
+    const measures = fields.measures || [];
  
-    if (!yearField || !monthField || pairs.length === 0 || data.length === 0) {
-      wrap.innerHTML = `<p style="color:#aaa;font-size:13px;padding:20px;">Configure the query with year dimension, month dimension, and at least one measure.</p>`;
+    if (!yearField || !monthField || measures.length === 0 || data.length === 0) {
+      wrap.innerHTML = `<p style="color:#aaa;font-size:13px;padding:20px;">Configure the query with a year dimension, month dimension, and at least one measure.</p>`;
       done();
       return;
     }
  
-    // Controls
     const controls = document.createElement("div");
     controls.className = "ecv-controls";
- 
     const lbl = document.createElement("label");
     lbl.textContent = "Metric";
     controls.appendChild(lbl);
- 
     const sel = document.createElement("select");
-    pairs.forEach((p, i) => {
+    measures.forEach((m, i) => {
       const o = document.createElement("option");
       o.value = i;
-      o.textContent = p.label;
+      o.textContent = m.label_short || m.label || m.name;
       sel.appendChild(o);
     });
     controls.appendChild(sel);
@@ -108,12 +79,10 @@ const eventCalendarViz = {
     wrap.appendChild(tableWrap);
  
     const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-    const MONTHS_SHORT = MONTHS.map(m => m.slice(0,3));
- 
     const isLowGood = config.is_low_good || false;
  
     function getCellValue(row, field) {
-      if (!field) return null;
+      if (!field || !row) return null;
       const cell = row[field.name];
       if (!cell) return null;
       const v = cell.value;
@@ -122,92 +91,72 @@ const eventCalendarViz = {
  
     function fmtValue(v, field) {
       if (v === null || v === undefined) return null;
-      const rendered = field ? (field.value_format || "") : "";
-      if (rendered.includes("£") || rendered.includes("gbp") || (field && field.name.toLowerCase().includes("cost")) || (field && field.name.toLowerCase().includes("commission")) || (field && field.name.toLowerCase().includes("expense"))) {
-        return "£" + Math.round(v).toLocaleString("en-GB");
-      }
-      if (rendered.includes("%") || (field && field.name.toLowerCase().includes("perc"))) {
-        return (v * 100).toFixed(1) + "%";
-      }
-      if (rendered.includes(".00") || (field && field.name.toLowerCase().includes("cpa"))) {
-        return "£" + v.toFixed(2);
+      const fname = (field.name + (field.value_format || "")).toLowerCase();
+      if (fname.includes("gbp") || fname.includes("cost") || fname.includes("commission") || fname.includes("expense") || fname.includes("cpa")) {
+        if (fname.includes("cpa") || fname.includes("decimal")) return "\u00a3" + v.toFixed(2);
+        return "\u00a3" + Math.round(v).toLocaleString("en-GB");
       }
       return Math.round(v).toLocaleString("en-GB");
     }
  
-    function renderTable(pairIdx) {
+    function renderTable(mIdx) {
       tableWrap.innerHTML = "";
-      const pair = pairs[pairIdx];
+      const measure = measures[mIdx];
  
-      // Index data by year → month
       const byYearMonth = {};
       const years = new Set();
       const monthsFound = new Set();
  
       data.forEach(row => {
-        const yearVal = row[yearField.name]?.value;
-        const monthVal = row[monthField.name]?.value;
-        if (!yearVal || !monthVal) return;
-        const y = String(yearVal);
-        const m = String(monthVal);
+        const y = String(row[yearField.name]?.value || "");
+        const m = String(row[monthField.name]?.value || "");
+        if (!y || !m) return;
         years.add(y);
         monthsFound.add(m);
         if (!byYearMonth[y]) byYearMonth[y] = {};
         byYearMonth[y][m] = row;
       });
  
-      // Sort years ascending
       const sortedYears = Array.from(years).sort();
- 
-      // Determine which months are present, in calendar order
       const activeMths = MONTHS.filter(m => monthsFound.has(m));
  
       const table = document.createElement("table");
       table.className = "ecv-table";
  
-      // Header
-      const thead = document.createElement("thead");
       let thRow = "<tr><th class='year-h'>Year</th>";
       activeMths.forEach(m => { thRow += `<th>${m.slice(0,3)}</th>`; });
       thRow += "</tr>";
-      thead.innerHTML = thRow;
-      table.appendChild(thead);
+      table.innerHTML = `<thead>${thRow}</thead>`;
  
-      // Body
       const tbody = document.createElement("tbody");
+ 
       sortedYears.forEach(y => {
+        const prevY = String(Number(y) - 1);
         const tr = document.createElement("tr");
         let html = `<td class="year-cell">${y}</td>`;
  
         activeMths.forEach(mo => {
-          const row = byYearMonth[y]?.[mo];
-          const prevRow = byYearMonth[String(Number(y)-1)]?.[mo];
- 
-          const curr = row ? getCellValue(row, pair.current) : null;
-          const pp = row && pair.pp ? getCellValue(row, pair.pp) : null;
- 
-          // pp% = (curr - pp) / pp
-          let ppPct = null;
-          if (curr !== null && pp !== null && pp !== 0) {
-            ppPct = (curr - pp) / Math.abs(pp) * 100;
-          }
+          const curr = getCellValue(byYearMonth[y]?.[mo], measure);
+          const prev = getCellValue(byYearMonth[prevY]?.[mo], measure);
  
           if (curr === null) {
-            html += `<td class="metric-cell"><span class="ecv-null">—</span></td>`;
-          } else {
-            const fmted = fmtValue(curr, pair.current);
-            let ppHtml = "";
-            if (ppPct !== null) {
-              const isGood = isLowGood ? ppPct < 0 : ppPct > 0;
-              const isBad = isLowGood ? ppPct > 0 : ppPct < 0;
-              const cls = isGood ? "ecv-pos" : isBad ? "ecv-neg" : "ecv-neu";
-              const arrow = ppPct > 0 ? "↑" : ppPct < 0 ? "↓" : "→";
-              ppHtml = `<div class="ecv-pp ${cls}">${arrow} ${Math.abs(ppPct).toFixed(1)}%</div>`;
-            } else {
-              ppHtml = `<div class="ecv-pp ecv-neu">—</div>`;
-            }
-            html += `<td class="metric-cell"><div class="ecv-main">${fmted}</div>${ppHtml}</td>`;
+            html += `<td class="metric-cell"><span class="ecv-null">\u2014</span></td>`;
+            return;
           }
+ 
+          const fmted = fmtValue(curr, measure);
+          let ppHtml = `<div class="ecv-pp ecv-neu">\u2014</div>`;
+ 
+          if (prev !== null && prev !== 0) {
+            const pct = (curr - prev) / Math.abs(prev) * 100;
+            const isGood = isLowGood ? pct < 0 : pct > 0;
+            const isBad  = isLowGood ? pct > 0 : pct < 0;
+            const cls    = isGood ? "ecv-pos" : isBad ? "ecv-neg" : "ecv-neu";
+            const arrow  = pct > 0 ? "\u2191" : pct < 0 ? "\u2193" : "\u2192";
+            ppHtml = `<div class="ecv-pp ${cls}">${arrow} ${Math.abs(pct).toFixed(1)}%</div>`;
+          }
+ 
+          html += `<td class="metric-cell"><div class="ecv-main">${fmted}</div>${ppHtml}</td>`;
         });
  
         tr.innerHTML = html;
@@ -220,7 +169,6 @@ const eventCalendarViz = {
  
     renderTable(parseInt(sel.value) || 0);
     sel.addEventListener("change", () => renderTable(parseInt(sel.value)));
- 
     done();
   }
 };
