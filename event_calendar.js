@@ -30,6 +30,7 @@ const eventCalendarViz = {
       .ecv-neg { color: #c0392b; }
       .ecv-neu { color: #aaa; }
       .ecv-null { color: #ccc; font-size: 12px; }
+      .ecv-debug { font-size: 11px; color: #aaa; padding: 8px; background: #fafafa; border-radius: 4px; margin-bottom: 10px; word-break: break-all; }
     `;
     element.appendChild(style);
     const wrap = document.createElement("div");
@@ -42,24 +43,37 @@ const eventCalendarViz = {
     const wrap = this._wrap;
     wrap.innerHTML = "";
  
-    const fields = queryResponse.fields;
-    const allFields = [...(fields.dimensions || []), ...(fields.measures || [])];
+    const dims = queryResponse.fields.dimensions || [];
+    const measures = queryResponse.fields.measures || [];
  
-    const yearField = allFields.find(f =>
-      (f.label_short || f.label || f.name).toLowerCase().includes("year")
-    );
-    const monthField = allFields.find(f => {
-      const l = (f.label_short || f.label || f.name).toLowerCase();
-      return l.includes("month") && !l.includes("year");
+    // Match year: dimension whose name ends with _year or label contains "year"
+    const yearField = dims.find(f => {
+      const n = f.name.toLowerCase();
+      const l = (f.label_short || f.label || "").toLowerCase();
+      return n.endsWith("_year") || l === "year" || l.includes("first year") || l.includes("year");
     });
-    const measures = fields.measures || [];
+ 
+    // Match month name: string dimension whose name contains "month_of_year" but NOT sort
+    const monthField = dims.find(f => {
+      const n = f.name.toLowerCase();
+      const l = (f.label_short || f.label || "").toLowerCase();
+      return (n.includes("month_of_year") || l.includes("month of year")) && !n.includes("sort");
+    });
+ 
+    // Match sort field: numeric dimension with "sort" in name
+    const sortField = dims.find(f => {
+      const n = f.name.toLowerCase();
+      return n.includes("month") && n.includes("sort");
+    });
  
     if (!yearField || !monthField || measures.length === 0 || data.length === 0) {
-      wrap.innerHTML = `<p style="color:#aaa;font-size:13px;padding:20px;">Configure the query with a year dimension, month dimension, and at least one measure.</p>`;
+      const allNames = [...dims, ...measures].map(f => f.name).join(", ");
+      wrap.innerHTML = `<div class="ecv-debug">Fields found: ${allNames || "none"}<br>yearField: ${yearField ? yearField.name : "NOT FOUND"} | monthField: ${monthField ? monthField.name : "NOT FOUND"} | measures: ${measures.length}</div>`;
       done();
       return;
     }
  
+    // Controls
     const controls = document.createElement("div");
     controls.className = "ecv-controls";
     const lbl = document.createElement("label");
@@ -89,6 +103,12 @@ const eventCalendarViz = {
       return (v === null || v === undefined || v === "") ? null : Number(v);
     }
  
+    function getSortValue(row) {
+      if (!sortField || !row) return null;
+      const cell = row[sortField.name];
+      return cell ? Number(cell.value) : null;
+    }
+ 
     function fmtValue(v, field) {
       if (v === null || v === undefined) return null;
       const fname = (field.name + (field.value_format || "")).toLowerCase();
@@ -105,20 +125,22 @@ const eventCalendarViz = {
  
       const byYearMonth = {};
       const years = new Set();
-      const monthsFound = new Set();
+      const monthSortMap = {};
  
       data.forEach(row => {
         const y = String(row[yearField.name]?.value || "");
         const m = String(row[monthField.name]?.value || "");
         if (!y || !m) return;
         years.add(y);
-        monthsFound.add(m);
         if (!byYearMonth[y]) byYearMonth[y] = {};
         byYearMonth[y][m] = row;
+        if (!monthSortMap[m]) {
+          monthSortMap[m] = getSortValue(row) || MONTHS.indexOf(m) + 1;
+        }
       });
  
       const sortedYears = Array.from(years).sort();
-      const activeMths = MONTHS.filter(m => monthsFound.has(m));
+      const activeMths = Object.keys(monthSortMap).sort((a, b) => monthSortMap[a] - monthSortMap[b]);
  
       const table = document.createElement("table");
       table.className = "ecv-table";
