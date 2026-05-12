@@ -6,6 +6,8 @@ looker.plugins.visualizations.add({
  
   updateAsync: function(data, element, config, queryResponse, details, done) {
     try {
+      console.log("ROW KEYS", JSON.stringify(Object.keys(data[0])));
+      console.log("PIVOTS", JSON.stringify(queryResponse.pivots));
       var container = document.getElementById('one-line-kpi-container');
       container.innerHTML = '';
  
