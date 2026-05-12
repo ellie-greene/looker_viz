@@ -5,16 +5,25 @@ looker.plugins.visualizations.add({
   },
  
   updateAsync: function(data, element, config, queryResponse, details, done) {
+    var container = document.getElementById('one-line-kpi-container');
     try {
-      console.log("ROW KEYS", JSON.stringify(Object.keys(data[0])));
-      console.log("PIVOTS", JSON.stringify(queryResponse.pivots));
-      var container = document.getElementById('one-line-kpi-container');
       container.innerHTML = '';
  
       if (!data || data.length === 0) { done(); return; }
  
       var fields = queryResponse.fields;
       var pivots = queryResponse.pivots;
+ 
+      // DEBUG — remove once working
+      container.innerHTML = '<pre style="font-size:10px; text-align:left; overflow:auto; width:100%;">' +
+        JSON.stringify({
+          pivots: pivots,
+          measures: (fields.measures || []).map(function(f){ return f.name; }),
+          dimensions: (fields.dimensions || []).map(function(f){ return f.name; }),
+          row0keys: Object.keys(data[0]),
+          row0sample: data[0]
+        }, null, 2) + '</pre>';
+      done(); return;
  
       // Expect a dimension (the period field) and pivoted measures
       var measureFields = (fields.measures || []).concat(fields.table_calculations || []);
@@ -85,9 +94,8 @@ looker.plugins.visualizations.add({
       });
  
     } catch(e) {
-      console.error("ONE LINE SCORECARD VIZ ERROR:", e);
+      container.innerHTML = '<div style="color:red; font-family: Google Sans, Roboto, sans-serif; padding:16px; font-size:0.85em;"><strong>ERROR:</strong> ' + e.message + '<br><br>' + e.stack + '</div>';
     }
     done();
   }
 });
- 
