@@ -140,9 +140,9 @@ looker.plugins.visualizations.add({
         position: sticky;
         top: 0;
         z-index: 2;
-        font-family: 'Proxima Nova', 'Helvetica Neue', Arial, sans-serif;
-        font-weight: 700;
-        letter-spacing: 0.03em;
+        font-family: 'Sofia Pro', 'Proxima Nova', 'Helvetica Neue', Arial, sans-serif;
+        font-weight: 500;
+        letter-spacing: 0;
         text-transform: none;
         font-size: 0.78em;
         white-space: nowrap;
@@ -269,7 +269,7 @@ looker.plugins.visualizations.add({
 
     for (const f of allFields) {
       const th = document.createElement("th");
-      th.textContent = (f.label_short || f.label || f.name).toLowerCase();
+      th.textContent = f.label_short || f.label || f.name;
       th.style.background = cfg.header_bg || "#1A1A2E";
       th.style.color = cfg.header_text || "#FFFFFF";
       th.style.padding = cfg.row_padding || "7px 12px";
