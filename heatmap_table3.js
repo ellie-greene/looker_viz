@@ -121,15 +121,6 @@ looker.plugins.visualizations.add({
 
   // ─── Create: inject base styles ───────────────────────────────────────────
   create(element, config) {
-    // Load Rubik from Google Fonts via link tag (avoids @import issues in dynamic style blocks)
-    if (!document.getElementById("ht-rubik-font")) {
-      const link = document.createElement("link");
-      link.id = "ht-rubik-font";
-      link.rel = "stylesheet";
-      link.href = "https://fonts.googleapis.com/css2?family=Rubik:wght@700&display=swap";
-      document.head.appendChild(link);
-    }
-
     const style = document.createElement("style");
     style.textContent = `
       .ht-wrap {
@@ -149,7 +140,7 @@ looker.plugins.visualizations.add({
         position: sticky;
         top: 0;
         z-index: 2;
-        font-family: 'Rubik', 'Proxima Nova', 'Helvetica Neue', Arial, sans-serif;
+        font-family: 'Proxima Nova', 'Helvetica Neue', Arial, sans-serif;
         font-weight: 700;
         letter-spacing: 0.03em;
         text-transform: none;
