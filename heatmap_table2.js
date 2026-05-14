@@ -123,11 +123,14 @@ looker.plugins.visualizations.add({
   create(element, config) {
     const style = document.createElement("style");
     style.textContent = `
+      @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@700&display=swap');
+
       .ht-wrap {
         width: 100%;
         height: 100%;
         overflow: auto;
-        font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+        font-family: 'Sofia Pro', 'Proxima Nova', 'Helvetica Neue', Arial, sans-serif;
+        font-weight: 500;
         box-sizing: border-box;
       }
       .ht-wrap table {
@@ -139,9 +142,10 @@ looker.plugins.visualizations.add({
         position: sticky;
         top: 0;
         z-index: 2;
-        font-weight: 600;
+        font-family: 'Rubik', 'Proxima Nova', 'Helvetica Neue', Arial, sans-serif;
+        font-weight: 700;
         letter-spacing: 0.03em;
-        text-transform: uppercase;
+        text-transform: none;
         font-size: 0.78em;
         white-space: nowrap;
         border-right: 1px solid rgba(255,255,255,0.12);
@@ -181,6 +185,8 @@ looker.plugins.visualizations.add({
         position: fixed;
         background: rgba(20,20,30,0.92);
         color: #fff;
+        font-family: 'Sofia Pro', 'Proxima Nova', 'Helvetica Neue', Arial, sans-serif;
+        font-weight: 500;
         font-size: 11px;
         padding: 4px 8px;
         border-radius: 4px;
@@ -265,7 +271,7 @@ looker.plugins.visualizations.add({
 
     for (const f of allFields) {
       const th = document.createElement("th");
-      th.textContent = f.label_short || f.label || f.name;
+      th.textContent = (f.label_short || f.label || f.name).toLowerCase();
       th.style.background = cfg.header_bg || "#1A1A2E";
       th.style.color = cfg.header_text || "#FFFFFF";
       th.style.padding = cfg.row_padding || "7px 12px";
@@ -418,5 +424,7 @@ function formatNum(n) {
   if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(1) + "M";
   if (Math.abs(n) >= 1e3) return (n / 1e3).toFixed(1) + "K";
   if (Number.isInteger(n)) return n.toString();
+  return n.toFixed(2);
+}
   return n.toFixed(2);
 }
