@@ -121,10 +121,17 @@ looker.plugins.visualizations.add({
 
   // ─── Create: inject base styles ───────────────────────────────────────────
   create(element, config) {
+    // Load Rubik from Google Fonts via link tag (avoids @import issues in dynamic style blocks)
+    if (!document.getElementById("ht-rubik-font")) {
+      const link = document.createElement("link");
+      link.id = "ht-rubik-font";
+      link.rel = "stylesheet";
+      link.href = "https://fonts.googleapis.com/css2?family=Rubik:wght@700&display=swap";
+      document.head.appendChild(link);
+    }
+
     const style = document.createElement("style");
     style.textContent = `
-      @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@700&display=swap');
-
       .ht-wrap {
         width: 100%;
         height: 100%;
@@ -424,7 +431,5 @@ function formatNum(n) {
   if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(1) + "M";
   if (Math.abs(n) >= 1e3) return (n / 1e3).toFixed(1) + "K";
   if (Number.isInteger(n)) return n.toString();
-  return n.toFixed(2);
-}
   return n.toFixed(2);
 }
