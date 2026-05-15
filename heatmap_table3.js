@@ -216,7 +216,9 @@ looker.plugins.visualizations.add({
     const cfg = config;
     const dims = queryResponse.fields.dimensions;
     const msrs = queryResponse.fields.measures;
-    const allFields = [...dims, ...msrs];
+    const pivots = queryResponse.fields.pivots || [];
+    const hasPivots = pivots.length > 0;
+    const pivotValues = queryResponse.pivots || []; // array of {key, data, metadata}
 
     // Parse excluded columns
     const excluded = new Set(
@@ -226,78 +228,170 @@ looker.plugins.visualizations.add({
         .filter(Boolean)
     );
 
-    // Determine which fields get coloured
-    const colourable = new Set(
-      allFields
-        .filter(f => {
-          if (excluded.has(f.name) || excluded.has(f.label) || excluded.has(f.label_short)) return false;
-          const isMsr = msrs.some(m => m.name === f.name);
-          const isDim = dims.some(d => d.name === f.name);
-          if (isMsr) return true;
-          if (isDim && cfg.color_dimensions) return true;
-          return false;
-        })
-        .map(f => f.name)
-    );
+    // ── Build column descriptors ─────────────────────────────────────────────
+    // Each col: { key, label, isMsr, colourable }
+    // For pivoted queries: one col per measure × pivot value combination
+    // For non-pivoted: one col per field
 
-    // Per-column stats (numeric only)
+    const cols = [];
+
+    // Dimension columns always come first, unpivoted
+    for (const d of dims) {
+      const isExcluded = excluded.has(d.name) || excluded.has(d.label) || excluded.has(d.label_short);
+      cols.push({
+        key: d.name,
+        label: d.label_short || d.label || d.name,
+        isMsr: false,
+        colourable: !isExcluded && !!cfg.color_dimensions,
+        fieldName: d.name,
+        pivotKey: null,
+      });
+    }
+
+    if (hasPivots) {
+      // For each measure, for each pivot value, create a column
+      for (const m of msrs) {
+        const isExcluded = excluded.has(m.name) || excluded.has(m.label) || excluded.has(m.label_short);
+        for (const pv of pivotValues) {
+          // pv.key is the pivot value string used to key into row data
+          // pv.metadata holds the rendered label for the pivot value
+          const pivotLabel = pv.metadata ? Object.values(pv.metadata).map(v => v.rendered || v.value).join(" – ") : pv.key;
+          cols.push({
+            key: `${m.name}_${pv.key}`,
+            label: pivotLabel,
+            isMsr: true,
+            colourable: !isExcluded,
+            fieldName: m.name,
+            pivotKey: pv.key,
+          });
+        }
+      }
+    } else {
+      for (const m of msrs) {
+        const isExcluded = excluded.has(m.name) || excluded.has(m.label) || excluded.has(m.label_short);
+        cols.push({
+          key: m.name,
+          label: m.label_short || m.label || m.name,
+          isMsr: true,
+          colourable: !isExcluded,
+          fieldName: m.name,
+          pivotKey: null,
+        });
+      }
+    }
+
+    // ── Per-column stats ─────────────────────────────────────────────────────
     const colStats = {};
-    for (const f of allFields) {
-      if (!colourable.has(f.name)) continue;
+    for (const col of cols) {
+      if (!col.colourable) continue;
       const vals = data
         .map(row => {
-          const v = row[f.name]?.value;
+          let v;
+          if (col.pivotKey !== null) {
+            // Pivoted: row[fieldName][pivotKey].value
+            v = row[col.fieldName]?.[col.pivotKey]?.value;
+          } else {
+            v = row[col.fieldName]?.value;
+          }
           return typeof v === "number" ? v : parseFloat(v);
         })
         .filter(v => !isNaN(v));
       if (vals.length === 0) continue;
-      colStats[f.name] = {
+      colStats[col.key] = {
         min: Math.min(...vals),
         max: Math.max(...vals),
+        vals,
       };
     }
 
-    // Build table
+    // ── Build table ──────────────────────────────────────────────────────────
     const table = document.createElement("table");
     if (cfg.stripe_rows) table.classList.add("ht-stripe");
 
-    // Header row
     const thead = table.createTHead();
+
+    // If pivoted, render a pivot-label header row above the measure header row
+    if (hasPivots && msrs.length > 1) {
+      // Group header row: span dim cols, then one cell per pivot value spanning all measures
+      const groupRow = thead.insertRow();
+      groupRow.style.background = cfg.header_bg || "#1A1A2E";
+      groupRow.style.color = cfg.header_text || "#FFFFFF";
+
+      // Empty cells for dimensions
+      for (const d of dims) {
+        const th = document.createElement("th");
+        th.style.background = cfg.header_bg || "#1A1A2E";
+        th.style.padding = cfg.row_padding || "7px 12px";
+        groupRow.appendChild(th);
+      }
+      // One th per pivot value spanning msrs.length cols
+      for (const pv of pivotValues) {
+        const pivotLabel = pv.metadata ? Object.values(pv.metadata).map(v => v.rendered || v.value).join(" – ") : pv.key;
+        const th = document.createElement("th");
+        th.textContent = pivotLabel;
+        th.colSpan = msrs.length;
+        th.style.background = cfg.header_bg || "#1A1A2E";
+        th.style.color = cfg.header_text || "#FFFFFF";
+        th.style.padding = cfg.row_padding || "7px 12px";
+        th.style.fontSize = cfg.font_size || "13px";
+        th.style.textAlign = "center";
+        th.style.borderLeft = "1px solid rgba(255,255,255,0.2)";
+        groupRow.appendChild(th);
+      }
+    }
+
+    // Main header row
     const headerRow = thead.insertRow();
     headerRow.style.background = cfg.header_bg || "#1A1A2E";
     headerRow.style.color = cfg.header_text || "#FFFFFF";
 
-    for (const f of allFields) {
+    for (const col of cols) {
       const th = document.createElement("th");
-      th.textContent = f.label_short || f.label || f.name;
+      // For pivoted single-measure, show measure label; for multi-measure pivots show measure label
+      let headerLabel = col.label;
+      if (hasPivots && col.isMsr && msrs.length === 1) {
+        // Only one measure — label is the pivot value, already set
+        headerLabel = col.label;
+      } else if (hasPivots && col.isMsr) {
+        // Multiple measures — label per cell is the measure name
+        const m = msrs.find(m => m.name === col.fieldName);
+        headerLabel = m ? (m.label_short || m.label || m.name) : col.label;
+      }
+      th.textContent = headerLabel;
       th.style.background = cfg.header_bg || "#1A1A2E";
       th.style.color = cfg.header_text || "#FFFFFF";
       th.style.padding = cfg.row_padding || "7px 12px";
       th.style.fontSize = cfg.font_size || "13px";
-      th.style.textAlign = msrs.some(m => m.name === f.name) ? "right" : "left";
+      th.style.textAlign = col.isMsr ? "right" : "left";
+      if (hasPivots && col.isMsr) {
+        th.style.borderLeft = "1px solid rgba(255,255,255,0.1)";
+      }
       headerRow.appendChild(th);
     }
 
-    // Body rows
+    // ── Body rows ────────────────────────────────────────────────────────────
     const tbody = table.createTBody();
     for (const row of data) {
       const tr = tbody.insertRow();
-      for (const f of allFields) {
+      for (const col of cols) {
         const td = tr.insertCell();
-        const cell = row[f.name] || {};
-        const isMsr = msrs.some(m => m.name === f.name);
 
-        td.className = isMsr ? "msr" : "dim";
+        let cell;
+        if (col.pivotKey !== null) {
+          cell = row[col.fieldName]?.[col.pivotKey] || {};
+        } else {
+          cell = row[col.fieldName] || {};
+        }
+
+        td.className = col.isMsr ? "msr" : "dim";
         td.style.padding = cfg.row_padding || "7px 12px";
         td.style.fontSize = cfg.font_size || "13px";
 
-        // Display value
         const displayVal = cell.rendered != null ? cell.rendered : (cell.value != null ? cell.value : "—");
         td.textContent = displayVal;
 
-        // Colouring
-        if (colStats[f.name]) {
-          const { min, max } = colStats[f.name];
+        if (colStats[col.key]) {
+          const { min, max, vals } = colStats[col.key];
           const rawVal = typeof cell.value === "number" ? cell.value : parseFloat(cell.value);
 
           if (!isNaN(rawVal)) {
@@ -316,7 +410,6 @@ looker.plugins.visualizations.add({
               td.style.color = contrastColor(bg);
             }
 
-            // Optional bar
             if (cfg.show_bars) {
               const bar = document.createElement("div");
               bar.className = "ht-bar";
@@ -327,19 +420,11 @@ looker.plugins.visualizations.add({
               td.appendChild(bar);
             }
 
-            // Tooltip showing rank in column
-            const rank = data
-              .map(r => {
-                const v = r[f.name]?.value;
-                return typeof v === "number" ? v : parseFloat(v);
-              })
-              .filter(v => !isNaN(v))
-              .sort((a, b) => b - a)
-              .indexOf(rawVal) + 1;
+            const rank = [...vals].sort((a, b) => b - a).indexOf(rawVal) + 1;
 
-            td.addEventListener("mouseenter", (e) => {
+            td.addEventListener("mouseenter", () => {
               this._tooltip.textContent =
-                `${f.label_short || f.label}: ${displayVal}  ·  #${rank} of ${data.length}  (min ${formatNum(min)}, max ${formatNum(max)})`;
+                `${col.label}: ${displayVal}  ·  #${rank} of ${data.length}  (min ${formatNum(min)}, max ${formatNum(max)})`;
               this._tooltip.style.display = "block";
             });
             td.addEventListener("mousemove", (e) => {
