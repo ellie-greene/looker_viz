@@ -209,10 +209,6 @@ looker.plugins.visualizations.add({
     controls.appendChild(lbl);
 
     const sel = document.createElement("select");
-    const allOpt = document.createElement("option");
-    allOpt.value = "all";
-    allOpt.textContent = "All metrics";
-    sel.appendChild(allOpt);
     msrs.forEach(m => {
       const o = document.createElement("option");
       o.value = m.name;
