@@ -6,126 +6,111 @@
 
 looker.plugins.visualizations.add({
 
-  // ─── Config options exposed in the Looker viz editor ─────────────────────
+  // ─── Config options ────────────────────────────────────────────────────────
   options: {
     color_low: {
-      section: "Colours",
-      order: 1,
-      type: "string",
-      display: "color",
-      label: "Low value colour",
-      default: "#D94F3D",
+      section: "Colours", order: 1,
+      type: "string", display: "color",
+      label: "Low value colour", default: "#D94F3D",
     },
     color_mid: {
-      section: "Colours",
-      order: 2,
-      type: "string",
-      display: "color",
-      label: "Mid value colour (leave blank for 2-colour scale)",
-      default: "#F5F0E8",
+      section: "Colours", order: 2,
+      type: "string", display: "color",
+      label: "Mid value colour (leave blank for 2-colour scale)", default: "#F5F0E8",
     },
     color_high: {
-      section: "Colours",
-      order: 3,
-      type: "string",
-      display: "color",
-      label: "High value colour",
-      default: "#3A7D44",
+      section: "Colours", order: 3,
+      type: "string", display: "color",
+      label: "High value colour", default: "#3A7D44",
     },
     low_is_good: {
-      section: "Colours",
-      order: 4,
+      section: "Colours", order: 4,
       type: "boolean",
-      label: "Low values are good (invert colour scale)",
-      default: false,
+      label: "Low values are good (invert colour scale)", default: false,
     },
     text_contrast: {
-      section: "Colours",
-      order: 5,
+      section: "Colours", order: 5,
       type: "boolean",
-      label: "Auto dark/light text for readability",
-      default: true,
+      label: "Auto dark/light text for readability", default: true,
     },
     exclude_cols: {
-      section: "Formatting",
-      order: 1,
+      section: "Formatting", order: 1,
       type: "string",
       label: "Columns to exclude from colouring (comma-separated field names)",
-      default: "",
-      placeholder: "e.g. orders.status, orders.country",
+      default: "", placeholder: "e.g. orders.status, orders.country",
     },
     color_dimensions: {
-      section: "Formatting",
-      order: 2,
-      type: "boolean",
-      label: "Colour dimension columns too",
-      default: false,
+      section: "Formatting", order: 2,
+      type: "boolean", label: "Colour dimension columns too", default: false,
     },
     show_bars: {
-      section: "Formatting",
-      order: 3,
-      type: "boolean",
-      label: "Show value bars inside cells",
-      default: false,
+      section: "Formatting", order: 3,
+      type: "boolean", label: "Show value bars inside cells", default: false,
     },
     font_size: {
-      section: "Formatting",
-      order: 4,
-      type: "string",
-      display: "select",
-      label: "Font size",
-      values: [
-        { "Small": "12px" },
-        { "Medium": "13px" },
-        { "Large": "15px" },
-      ],
+      section: "Formatting", order: 4,
+      type: "string", display: "select", label: "Font size",
+      values: [{ "Small": "12px" }, { "Medium": "13px" }, { "Large": "15px" }],
       default: "13px",
     },
     header_bg: {
-      section: "Formatting",
-      order: 5,
-      type: "string",
-      display: "color",
-      label: "Header background colour",
-      default: "#1A1A2E",
+      section: "Formatting", order: 5,
+      type: "string", display: "color",
+      label: "Header background colour", default: "#1A1A2E",
     },
     header_text: {
-      section: "Formatting",
-      order: 6,
-      type: "string",
-      display: "color",
-      label: "Header text colour",
-      default: "#FFFFFF",
+      section: "Formatting", order: 6,
+      type: "string", display: "color",
+      label: "Header text colour", default: "#FFFFFF",
     },
     row_padding: {
-      section: "Formatting",
-      order: 7,
-      type: "string",
-      display: "select",
-      label: "Row density",
-      values: [
-        { "Compact": "4px 8px" },
-        { "Normal": "7px 12px" },
-        { "Comfortable": "11px 14px" },
-      ],
+      section: "Formatting", order: 7,
+      type: "string", display: "select", label: "Row density",
+      values: [{ "Compact": "4px 8px" }, { "Normal": "7px 12px" }, { "Comfortable": "11px 14px" }],
       default: "7px 12px",
     },
     stripe_rows: {
-      section: "Formatting",
-      order: 8,
-      type: "boolean",
-      label: "Stripe alternate rows",
-      default: false,
+      section: "Formatting", order: 8,
+      type: "boolean", label: "Stripe alternate rows", default: false,
     },
   },
 
-  // ─── Create: inject base styles ───────────────────────────────────────────
+  // ─── Create ────────────────────────────────────────────────────────────────
   create(element, config) {
     const style = document.createElement("style");
     style.textContent = `
-      .ht-wrap {
+      .ht-outer {
         width: 100%;
         height: 100%;
+        display: flex;
+        flex-direction: column;
+        box-sizing: border-box;
+        font-family: 'Sofia Pro', 'Proxima Nova', 'Helvetica Neue', Arial, sans-serif;
+        font-weight: 500;
+      }
+      .ht-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        flex-shrink: 0;
+      }
+      .ht-controls label {
+        font-size: 12px;
+        color: #6b6b6b;
+      }
+      .ht-controls select {
+        font-size: 12px;
+        padding: 3px 7px;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+        background: #fff;
+        color: #333;
+        cursor: pointer;
+        font-family: 'Sofia Pro', 'Proxima Nova', 'Helvetica Neue', Arial, sans-serif;
+      }
+      .ht-wrap {
+        flex: 1;
         overflow: auto;
         font-family: 'Sofia Pro', 'Proxima Nova', 'Helvetica Neue', Arial, sans-serif;
         font-weight: 500;
@@ -161,24 +146,15 @@ looker.plugins.visualizations.add({
       .ht-wrap td.dim { text-align: left; font-weight: 500; }
       .ht-wrap td.msr { text-align: right; font-variant-numeric: tabular-nums; }
       .ht-wrap tbody tr:hover td { filter: brightness(0.93); }
-
-      /* bar overlay */
       .ht-bar {
         position: absolute;
-        bottom: 0;
-        left: 0;
+        bottom: 0; left: 0;
         height: 3px;
         pointer-events: none;
         opacity: 0.55;
         border-radius: 0 2px 0 0;
       }
-
-      /* stripe */
-      .ht-stripe tbody tr:nth-child(even) td {
-        filter: brightness(0.96);
-      }
-
-      /* tooltip */
+      .ht-stripe tbody tr:nth-child(even) td { filter: brightness(0.96); }
       .ht-tooltip {
         position: fixed;
         background: rgba(20,20,30,0.92);
@@ -196,19 +172,19 @@ looker.plugins.visualizations.add({
     `;
     element.appendChild(style);
 
-    this._wrap = element.appendChild(document.createElement("div"));
-    this._wrap.className = "ht-wrap";
+    this._outer = element.appendChild(document.createElement("div"));
+    this._outer.className = "ht-outer";
 
     this._tooltip = element.appendChild(document.createElement("div"));
     this._tooltip.className = "ht-tooltip";
   },
 
-  // ─── Update: main render ──────────────────────────────────────────────────
+  // ─── Update ────────────────────────────────────────────────────────────────
   updateAsync(data, element, config, queryResponse, details, done) {
-    this._wrap.innerHTML = "";
+    this._outer.innerHTML = "";
 
     if (!data || data.length === 0) {
-      this._wrap.innerHTML = `<p style="padding:16px;color:#888;">No data returned.</p>`;
+      this._outer.innerHTML = `<p style="padding:16px;color:#888;">No data returned.</p>`;
       done();
       return;
     }
@@ -218,233 +194,238 @@ looker.plugins.visualizations.add({
     const msrs = queryResponse.fields.measures;
     const pivots = queryResponse.fields.pivots || [];
     const hasPivots = pivots.length > 0;
-    const pivotValues = queryResponse.pivots || []; // array of {key, data, metadata}
+    const pivotValues = queryResponse.pivots || [];
 
-    // Parse excluded columns
     const excluded = new Set(
-      (cfg.exclude_cols || "")
-        .split(",")
-        .map(s => s.trim())
-        .filter(Boolean)
+      (cfg.exclude_cols || "").split(",").map(s => s.trim()).filter(Boolean)
     );
 
-    // ── Build column descriptors ─────────────────────────────────────────────
-    // Each col: { key, label, isMsr, colourable }
-    // For pivoted queries: one col per measure × pivot value combination
-    // For non-pivoted: one col per field
+    // ── Controls bar ──────────────────────────────────────────────────────────
+    const controls = document.createElement("div");
+    controls.className = "ht-controls";
 
-    const cols = [];
+    const lbl = document.createElement("label");
+    lbl.textContent = "Metric";
+    controls.appendChild(lbl);
 
-    // Dimension columns always come first, unpivoted
-    for (const d of dims) {
-      const isExcluded = excluded.has(d.name) || excluded.has(d.label) || excluded.has(d.label_short);
-      cols.push({
-        key: d.name,
-        label: d.label_short || d.label || d.name,
-        isMsr: false,
-        colourable: !isExcluded && !!cfg.color_dimensions,
-        fieldName: d.name,
-        pivotKey: null,
-      });
-    }
+    const sel = document.createElement("select");
+    const allOpt = document.createElement("option");
+    allOpt.value = "all";
+    allOpt.textContent = "All metrics";
+    sel.appendChild(allOpt);
+    msrs.forEach(m => {
+      const o = document.createElement("option");
+      o.value = m.name;
+      o.textContent = m.label_short || m.label || m.name;
+      sel.appendChild(o);
+    });
+    controls.appendChild(sel);
 
-    if (hasPivots) {
-      // For each measure, for each pivot value, create a column
-      for (const m of msrs) {
-        const isExcluded = excluded.has(m.name) || excluded.has(m.label) || excluded.has(m.label_short);
-        for (const pv of pivotValues) {
-          // pv.key is the pivot value string used to key into row data
-          // pv.metadata holds the rendered label for the pivot value
-          const pivotLabel = pv.metadata ? Object.values(pv.metadata).map(v => v.rendered || v.value).join(" – ") : pv.key;
-          cols.push({
-            key: `${m.name}_${pv.key}`,
-            label: pivotLabel,
-            isMsr: true,
-            colourable: !isExcluded,
-            fieldName: m.name,
-            pivotKey: pv.key,
-          });
-        }
-      }
-    } else {
-      for (const m of msrs) {
-        const isExcluded = excluded.has(m.name) || excluded.has(m.label) || excluded.has(m.label_short);
+    // Hide controls if only one measure
+    controls.style.display = msrs.length <= 1 ? "none" : "flex";
+    this._outer.appendChild(controls);
+
+    // ── Table container ───────────────────────────────────────────────────────
+    const wrap = document.createElement("div");
+    wrap.className = "ht-wrap";
+    this._outer.appendChild(wrap);
+
+    const tooltip = this._tooltip;
+
+    // ── Render function ───────────────────────────────────────────────────────
+    const renderTable = (selectedMsrName) => {
+      wrap.innerHTML = "";
+
+      const visibleMsrs = selectedMsrName === "all"
+        ? msrs
+        : msrs.filter(m => m.name === selectedMsrName);
+
+      // Build column descriptors
+      const cols = [];
+
+      for (const d of dims) {
+        const isExcluded = excluded.has(d.name) || excluded.has(d.label) || excluded.has(d.label_short);
         cols.push({
-          key: m.name,
-          label: m.label_short || m.label || m.name,
-          isMsr: true,
-          colourable: !isExcluded,
-          fieldName: m.name,
+          key: d.name,
+          label: d.label_short || d.label || d.name,
+          isMsr: false,
+          colourable: !isExcluded && !!cfg.color_dimensions,
+          fieldName: d.name,
           pivotKey: null,
         });
       }
-    }
 
-    // ── Per-column stats ─────────────────────────────────────────────────────
-    const colStats = {};
-    for (const col of cols) {
-      if (!col.colourable) continue;
-      const vals = data
-        .map(row => {
-          let v;
-          if (col.pivotKey !== null) {
-            // Pivoted: row[fieldName][pivotKey].value
-            v = row[col.fieldName]?.[col.pivotKey]?.value;
-          } else {
-            v = row[col.fieldName]?.value;
+      if (hasPivots) {
+        for (const m of visibleMsrs) {
+          const isExcluded = excluded.has(m.name) || excluded.has(m.label) || excluded.has(m.label_short);
+          for (const pv of pivotValues) {
+            const pivotLabel = pv.metadata
+              ? Object.values(pv.metadata).map(v => v.rendered || v.value).join(" – ")
+              : pv.key;
+            cols.push({
+              key: `${m.name}_${pv.key}`,
+              label: pivotLabel,
+              isMsr: true,
+              colourable: !isExcluded,
+              fieldName: m.name,
+              pivotKey: pv.key,
+            });
           }
-          return typeof v === "number" ? v : parseFloat(v);
-        })
-        .filter(v => !isNaN(v));
-      if (vals.length === 0) continue;
-      colStats[col.key] = {
-        min: Math.min(...vals),
-        max: Math.max(...vals),
-        vals,
-      };
-    }
-
-    // ── Build table ──────────────────────────────────────────────────────────
-    const table = document.createElement("table");
-    if (cfg.stripe_rows) table.classList.add("ht-stripe");
-
-    const thead = table.createTHead();
-
-    // If pivoted, render a pivot-label header row above the measure header row
-    if (hasPivots && msrs.length > 1) {
-      // Group header row: span dim cols, then one cell per pivot value spanning all measures
-      const groupRow = thead.insertRow();
-      groupRow.style.background = cfg.header_bg || "#1A1A2E";
-      groupRow.style.color = cfg.header_text || "#FFFFFF";
-
-      // Empty cells for dimensions
-      for (const d of dims) {
-        const th = document.createElement("th");
-        th.style.background = cfg.header_bg || "#1A1A2E";
-        th.style.padding = cfg.row_padding || "7px 12px";
-        groupRow.appendChild(th);
+        }
+      } else {
+        for (const m of visibleMsrs) {
+          const isExcluded = excluded.has(m.name) || excluded.has(m.label) || excluded.has(m.label_short);
+          cols.push({
+            key: m.name,
+            label: m.label_short || m.label || m.name,
+            isMsr: true,
+            colourable: !isExcluded,
+            fieldName: m.name,
+            pivotKey: null,
+          });
+        }
       }
-      // One th per pivot value spanning msrs.length cols
-      for (const pv of pivotValues) {
-        const pivotLabel = pv.metadata ? Object.values(pv.metadata).map(v => v.rendered || v.value).join(" – ") : pv.key;
+
+      // Per-column stats
+      const colStats = {};
+      for (const col of cols) {
+        if (!col.colourable) continue;
+        const vals = data.map(row => {
+          const v = col.pivotKey !== null
+            ? row[col.fieldName]?.[col.pivotKey]?.value
+            : row[col.fieldName]?.value;
+          return typeof v === "number" ? v : parseFloat(v);
+        }).filter(v => !isNaN(v));
+        if (vals.length === 0) continue;
+        colStats[col.key] = { min: Math.min(...vals), max: Math.max(...vals), vals };
+      }
+
+      // Build table
+      const table = document.createElement("table");
+      if (cfg.stripe_rows) table.classList.add("ht-stripe");
+
+      const thead = table.createTHead();
+
+      // Group header row for multi-measure pivots
+      if (hasPivots && visibleMsrs.length > 1) {
+        const groupRow = thead.insertRow();
+        groupRow.style.background = cfg.header_bg || "#1A1A2E";
+        groupRow.style.color = cfg.header_text || "#FFFFFF";
+        for (const d of dims) {
+          const th = document.createElement("th");
+          th.style.background = cfg.header_bg || "#1A1A2E";
+          th.style.padding = cfg.row_padding || "7px 12px";
+          groupRow.appendChild(th);
+        }
+        for (const pv of pivotValues) {
+          const pivotLabel = pv.metadata
+            ? Object.values(pv.metadata).map(v => v.rendered || v.value).join(" – ")
+            : pv.key;
+          const th = document.createElement("th");
+          th.textContent = pivotLabel;
+          th.colSpan = visibleMsrs.length;
+          th.style.background = cfg.header_bg || "#1A1A2E";
+          th.style.color = cfg.header_text || "#FFFFFF";
+          th.style.padding = cfg.row_padding || "7px 12px";
+          th.style.fontSize = cfg.font_size || "13px";
+          th.style.textAlign = "center";
+          th.style.borderLeft = "1px solid rgba(255,255,255,0.2)";
+          groupRow.appendChild(th);
+        }
+      }
+
+      // Main header row
+      const headerRow = thead.insertRow();
+      headerRow.style.background = cfg.header_bg || "#1A1A2E";
+      headerRow.style.color = cfg.header_text || "#FFFFFF";
+
+      for (const col of cols) {
         const th = document.createElement("th");
-        th.textContent = pivotLabel;
-        th.colSpan = msrs.length;
+        let headerLabel = col.label;
+        if (hasPivots && col.isMsr && visibleMsrs.length > 1) {
+          const m = msrs.find(m => m.name === col.fieldName);
+          headerLabel = m ? (m.label_short || m.label || m.name) : col.label;
+        }
+        th.textContent = headerLabel;
         th.style.background = cfg.header_bg || "#1A1A2E";
         th.style.color = cfg.header_text || "#FFFFFF";
         th.style.padding = cfg.row_padding || "7px 12px";
         th.style.fontSize = cfg.font_size || "13px";
-        th.style.textAlign = "center";
-        th.style.borderLeft = "1px solid rgba(255,255,255,0.2)";
-        groupRow.appendChild(th);
+        th.style.textAlign = col.isMsr ? "right" : "left";
+        if (hasPivots && col.isMsr) th.style.borderLeft = "1px solid rgba(255,255,255,0.1)";
+        headerRow.appendChild(th);
       }
-    }
 
-    // Main header row
-    const headerRow = thead.insertRow();
-    headerRow.style.background = cfg.header_bg || "#1A1A2E";
-    headerRow.style.color = cfg.header_text || "#FFFFFF";
+      // Body rows
+      const tbody = table.createTBody();
+      for (const row of data) {
+        const tr = tbody.insertRow();
+        for (const col of cols) {
+          const td = tr.insertCell();
+          const cell = col.pivotKey !== null
+            ? (row[col.fieldName]?.[col.pivotKey] || {})
+            : (row[col.fieldName] || {});
 
-    for (const col of cols) {
-      const th = document.createElement("th");
-      // For pivoted single-measure, show measure label; for multi-measure pivots show measure label
-      let headerLabel = col.label;
-      if (hasPivots && col.isMsr && msrs.length === 1) {
-        // Only one measure — label is the pivot value, already set
-        headerLabel = col.label;
-      } else if (hasPivots && col.isMsr) {
-        // Multiple measures — label per cell is the measure name
-        const m = msrs.find(m => m.name === col.fieldName);
-        headerLabel = m ? (m.label_short || m.label || m.name) : col.label;
-      }
-      th.textContent = headerLabel;
-      th.style.background = cfg.header_bg || "#1A1A2E";
-      th.style.color = cfg.header_text || "#FFFFFF";
-      th.style.padding = cfg.row_padding || "7px 12px";
-      th.style.fontSize = cfg.font_size || "13px";
-      th.style.textAlign = col.isMsr ? "right" : "left";
-      if (hasPivots && col.isMsr) {
-        th.style.borderLeft = "1px solid rgba(255,255,255,0.1)";
-      }
-      headerRow.appendChild(th);
-    }
+          td.className = col.isMsr ? "msr" : "dim";
+          td.style.padding = cfg.row_padding || "7px 12px";
+          td.style.fontSize = cfg.font_size || "13px";
 
-    // ── Body rows ────────────────────────────────────────────────────────────
-    const tbody = table.createTBody();
-    for (const row of data) {
-      const tr = tbody.insertRow();
-      for (const col of cols) {
-        const td = tr.insertCell();
+          const displayVal = cell.rendered != null ? cell.rendered : (cell.value != null ? cell.value : "—");
+          td.textContent = displayVal;
 
-        let cell;
-        if (col.pivotKey !== null) {
-          cell = row[col.fieldName]?.[col.pivotKey] || {};
-        } else {
-          cell = row[col.fieldName] || {};
-        }
+          if (colStats[col.key]) {
+            const { min, max, vals } = colStats[col.key];
+            const rawVal = typeof cell.value === "number" ? cell.value : parseFloat(cell.value);
 
-        td.className = col.isMsr ? "msr" : "dim";
-        td.style.padding = cfg.row_padding || "7px 12px";
-        td.style.fontSize = cfg.font_size || "13px";
+            if (!isNaN(rawVal)) {
+              let t = max === min ? 0.5 : (rawVal - min) / (max - min);
+              if (cfg.low_is_good) t = 1 - t;
 
-        const displayVal = cell.rendered != null ? cell.rendered : (cell.value != null ? cell.value : "—");
-        td.textContent = displayVal;
+              const bg = interpolateColor(
+                cfg.color_low || "#D94F3D",
+                cfg.color_high || "#3A7D44",
+                t, cfg.color_mid || null
+              );
+              td.style.backgroundColor = bg;
+              if (cfg.text_contrast !== false) td.style.color = contrastColor(bg);
 
-        if (colStats[col.key]) {
-          const { min, max, vals } = colStats[col.key];
-          const rawVal = typeof cell.value === "number" ? cell.value : parseFloat(cell.value);
+              if (cfg.show_bars) {
+                const bar = document.createElement("div");
+                bar.className = "ht-bar";
+                bar.style.width = (t * 100) + "%";
+                bar.style.background = cfg.low_is_good
+                  ? (t < 0.5 ? cfg.color_high : cfg.color_low)
+                  : (t > 0.5 ? cfg.color_high : cfg.color_low);
+                td.appendChild(bar);
+              }
 
-          if (!isNaN(rawVal)) {
-            let t = max === min ? 0.5 : (rawVal - min) / (max - min);
-            if (cfg.low_is_good) t = 1 - t;
-
-            const bg = interpolateColor(
-              cfg.color_low || "#D94F3D",
-              cfg.color_high || "#3A7D44",
-              t,
-              cfg.color_mid || null
-            );
-            td.style.backgroundColor = bg;
-
-            if (cfg.text_contrast !== false) {
-              td.style.color = contrastColor(bg);
+              const rank = [...vals].sort((a, b) => b - a).indexOf(rawVal) + 1;
+              td.addEventListener("mouseenter", () => {
+                tooltip.textContent = `${col.label}: ${displayVal}  ·  #${rank} of ${data.length}  (min ${formatNum(min)}, max ${formatNum(max)})`;
+                tooltip.style.display = "block";
+              });
+              td.addEventListener("mousemove", (e) => {
+                tooltip.style.left = (e.clientX + 12) + "px";
+                tooltip.style.top = (e.clientY - 24) + "px";
+              });
+              td.addEventListener("mouseleave", () => { tooltip.style.display = "none"; });
             }
-
-            if (cfg.show_bars) {
-              const bar = document.createElement("div");
-              bar.className = "ht-bar";
-              bar.style.width = (t * 100) + "%";
-              bar.style.background = cfg.low_is_good
-                ? (t < 0.5 ? cfg.color_high : cfg.color_low)
-                : (t > 0.5 ? cfg.color_high : cfg.color_low);
-              td.appendChild(bar);
-            }
-
-            const rank = [...vals].sort((a, b) => b - a).indexOf(rawVal) + 1;
-
-            td.addEventListener("mouseenter", () => {
-              this._tooltip.textContent =
-                `${col.label}: ${displayVal}  ·  #${rank} of ${data.length}  (min ${formatNum(min)}, max ${formatNum(max)})`;
-              this._tooltip.style.display = "block";
-            });
-            td.addEventListener("mousemove", (e) => {
-              this._tooltip.style.left = (e.clientX + 12) + "px";
-              this._tooltip.style.top = (e.clientY - 24) + "px";
-            });
-            td.addEventListener("mouseleave", () => {
-              this._tooltip.style.display = "none";
-            });
           }
         }
       }
-    }
 
-    this._wrap.appendChild(table);
+      wrap.appendChild(table);
+    };
+
+    // Initial render + wire up dropdown
+    renderTable(sel.value);
+    sel.addEventListener("change", () => renderTable(sel.value));
+
     done();
   },
 });
 
-// ─── Colour helpers ───────────────────────────────────────────────────────────
+// ─── Colour helpers ────────────────────────────────────────────────────────────
 
 function hexToRgb(hex) {
   hex = hex.replace(/^#/, "");
@@ -465,32 +446,19 @@ function lerpRgb(c1, c2, t) {
   };
 }
 
-/**
- * Interpolate between low → mid → high (or low → high if no mid)
- * t: 0–1
- */
 function interpolateColor(hexLow, hexHigh, t, hexMid) {
   const low = hexToRgb(hexLow);
   const high = hexToRgb(hexHigh);
-
   let rgb;
   if (hexMid && hexMid.trim() !== "") {
     const mid = hexToRgb(hexMid);
-    if (t < 0.5) {
-      rgb = lerpRgb(low, mid, t * 2);
-    } else {
-      rgb = lerpRgb(mid, high, (t - 0.5) * 2);
-    }
+    rgb = t < 0.5 ? lerpRgb(low, mid, t * 2) : lerpRgb(mid, high, (t - 0.5) * 2);
   } else {
     rgb = lerpRgb(low, high, t);
   }
-
   return rgbToHex(rgb);
 }
 
-/**
- * Return black or white text based on background luminance (WCAG formula)
- */
 function contrastColor(hex) {
   const { r, g, b } = hexToRgb(hex);
   const luminance = 0.2126 * linearise(r / 255)
