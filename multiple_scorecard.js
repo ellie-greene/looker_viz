@@ -2,7 +2,7 @@ looker.plugins.visualizations.add({
   options: {},
 
   create: function(element, config) {
-    element.innerHTML = '<div id="one-line-kpi-container" style="height:100%; display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:16px; padding:16px; box-sizing:border-box;"></div>';
+    element.innerHTML = '<div id="one-line-kpi-container" style="height:100%; display:flex; align-items:stretch; justify-content:center; flex-wrap:nowrap; gap:16px; padding:16px; box-sizing:border-box; overflow:hidden;"></div>';
   },
 
   updateAsync: function(data, element, config, queryResponse, details, done) {
@@ -28,24 +28,52 @@ looker.plugins.visualizations.add({
 
       if (!currentRow) { done(); return; }
 
-      function makeCard(label, currentVal, currentRendered, previousVal) {
+      // Count cards to scale font size
+      var cardCount = pivots && pivots.length > 0 ? pivots.length : measures.length;
+
+      // Scale value font size down as card count increases
+      // 1 card → 2.5em, 4 cards → 1.8em, 8+ cards → 1.1em
+      var valueFontSize = Math.max(1.1, 2.5 - (cardCount - 1) * 0.18);
+
+      // Scale label and pp line proportionally
+      var labelFontSize = Math.max(0.62, 0.85 - (cardCount - 1) * 0.025);
+      var ppFontSize    = Math.max(0.58, 0.82 - (cardCount - 1) * 0.025);
+
+      // Padding also shrinks slightly
+      var hPad = Math.max(10, 28 - (cardCount - 1) * 3);
+      var vPad = Math.max(10, 20 - (cardCount - 1) * 2);
+
+      function makeCard(label, currentVal, currentRendered, previousVal, previousRendered) {
         var ppLine = '';
-        if (previousRow && previousVal !== null && previousVal !== undefined && currentVal !== null && currentVal !== undefined && previousVal !== 0) {
-          var pct        = (currentVal - previousVal) / Math.abs(previousVal);
-          var pctStr     = (pct >= 0 ? '+' : '') + (pct * 100).toFixed(1) + '%';
-          var arrow      = pct >= 0
+        if (previousRow && previousVal !== null && previousVal !== undefined && currentVal !== null && currentVal !== undefined) {
+          var diff  = currentVal - previousVal;
+          var arrow = diff >= 0
             ? '<span style="color:#1e8c45;">▲</span>'
             : '<span style="color:#c0392b;">▼</span>';
-          ppLine = '<div style="font-size:0.82em; color:#696969; margin-top:4px;">' + arrow + ' ' + pctStr + ' vs prev. period</div>';
+
+          // Try to infer a prefix/suffix from the rendered values (e.g. £, $, %)
+          var prefix = '', suffix = '';
+          var rendered = currentRendered || previousRendered || '';
+          var prefixMatch = rendered.match(/^([^0-9\-\(]+)/);
+          var suffixMatch = rendered.match(/([^0-9,\.]+)$/);
+          if (prefixMatch) prefix = prefixMatch[1];
+          if (suffixMatch && suffixMatch[1] !== prefixMatch[1]) suffix = suffixMatch[1];
+
+          // Format the absolute diff value, matching decimal places of rendered value
+          var decimals = (rendered.match(/\.(\d+)/) || [,''])[1].length;
+          var absDiff  = Math.abs(diff);
+          var diffStr  = prefix + (diff >= 0 ? '+' : '-') + absDiff.toFixed(decimals) + suffix;
+
+          ppLine = '<div style="font-size:' + ppFontSize + 'em; color:#696969; margin-top:4px;">' + arrow + ' ' + diffStr + ' vs prev. period</div>';
         } else if (previousRow) {
-          ppLine = '<div style="font-size:0.82em; color:#696969; margin-top:4px;">— vs prev. period</div>';
+          ppLine = '<div style="font-size:' + ppFontSize + 'em; color:#696969; margin-top:4px;">— vs prev. period</div>';
         }
 
         var card = document.createElement('div');
-        card.style.cssText = 'text-align:center; font-family: Google Sans, Roboto, sans-serif; background:#fff; border-radius:8px; padding:20px 28px; min-width:140px; flex:1; box-shadow:0 1px 3px rgba(0,0,0,0.1);';
+        card.style.cssText = 'text-align:center; font-family: Google Sans, Roboto, sans-serif; background:#fff; border-radius:8px; padding:' + vPad + 'px ' + hPad + 'px; min-width:0; flex:1; box-shadow:0 1px 3px rgba(0,0,0,0.1); display:flex; flex-direction:column; justify-content:center; overflow:hidden;';
         card.innerHTML =
-          '<div style="font-size:0.85em; color:#696969; margin-bottom:8px; font-weight:500; text-transform:capitalize;">' + label + '</div>' +
-          '<div style="font-size:2.5em; font-weight:600; color:#282828;">' + (currentRendered || currentVal) + '</div>' +
+          '<div style="font-size:' + labelFontSize + 'em; color:#696969; margin-bottom:8px; font-weight:500; text-transform:capitalize; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + label + '</div>' +
+          '<div style="font-size:' + valueFontSize + 'em; font-weight:600; color:#282828; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + (currentRendered || currentVal) + '</div>' +
           ppLine;
         return card;
       }
@@ -62,7 +90,8 @@ looker.plugins.visualizations.add({
             pivotLabel,
             currentCell.value,
             currentCell.rendered,
-            previousCell.value
+            previousCell.value,
+            previousCell.rendered
           );
           container.appendChild(card);
         });
@@ -72,13 +101,13 @@ looker.plugins.visualizations.add({
         measures.forEach(function(measure) {
           var currentCell  = currentRow[measure.name]  || {};
           var previousCell = previousRow ? (previousRow[measure.name] || {}) : {};
-          // Use measure label, stripping view name prefix for display
           var label = measure.label_short || measure.label || measure.name;
           var card = makeCard(
             label,
             currentCell.value,
             currentCell.rendered,
-            previousCell.value
+            previousCell.value,
+            previousCell.rendered
           );
           container.appendChild(card);
         });
