@@ -50,9 +50,8 @@ const lineChartBreakdownViz = {
       done(); return;
     }
 
-    const xDimField      = dims[0];
-    const breakdownField = dims[1];
-    const isLowGood      = config.is_low_good || false;
+    const xDimField = dims[0];
+    const isLowGood = config.is_low_good || false;
 
     // Brand colour palette
     const PALETTE = [
@@ -84,6 +83,20 @@ const lineChartBreakdownViz = {
       selM.appendChild(o);
     });
     controls.appendChild(selM);
+
+    const lblB = document.createElement("label");
+    lblB.textContent = "Breakdown";
+    controls.appendChild(lblB);
+
+    const selB = document.createElement("select");
+    // Exclude dims[0] (x axis) — only dims[1+] are valid breakdown options
+    dims.slice(1).forEach((d, i) => {
+      const o = document.createElement("option");
+      o.value = i + 1; // index into dims[]
+      o.textContent = d.label_short || d.label || d.name;
+      selB.appendChild(o);
+    });
+    controls.appendChild(selB);
 
     // Legend sits in the controls row
     const legend = document.createElement("div");
@@ -160,7 +173,7 @@ const lineChartBreakdownViz = {
 
     // ── Build series from data ────────────────────────────────────────────────
 
-    function buildSeries(measure) {
+    function buildSeries(measure, breakdownField) {
       // Collect all x values in order (deduped, preserving first-seen order)
       const xOrder = [];
       const xSeen  = new Set();
@@ -194,13 +207,14 @@ const lineChartBreakdownViz = {
 
     // ── Render ────────────────────────────────────────────────────────────────
 
-    function renderChart(mIdx) {
+    function renderChart(mIdx, bIdx) {
       const oldSvg = chartWrap.querySelector("svg");
       if (oldSvg) oldSvg.remove();
       legend.innerHTML = "";
 
       const measure = measures[mIdx];
-      const { xLabels, series } = buildSeries(measure);
+      const breakdownField = dims[bIdx] || dims[1];
+      const { xLabels, series } = buildSeries(measure, breakdownField);
 
       if (!xLabels.length || !series.length) {
         chartWrap.innerHTML = '<div class="lc-debug">No data points to render.</div>';
@@ -345,8 +359,9 @@ const lineChartBreakdownViz = {
       });
     }
 
-    renderChart(parseInt(selM.value) || 0);
-    selM.addEventListener("change", () => renderChart(parseInt(selM.value)));
+    renderChart(parseInt(selM.value) || 0, parseInt(selB.value) || 1);
+    selM.addEventListener("change", () => renderChart(parseInt(selM.value), parseInt(selB.value) || 1));
+    selB.addEventListener("change", () => renderChart(parseInt(selM.value), parseInt(selB.value) || 1));
 
     done();
   }
