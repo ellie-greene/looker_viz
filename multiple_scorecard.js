@@ -14,16 +14,47 @@ looker.plugins.visualizations.add({
 
       var fields   = queryResponse.fields;
       var pivots   = queryResponse.pivots;
-      var dimField = fields.dimensions[0];
-      var measures = fields.measures;
+      var measures = (fields.measures || []).concat(fields.table_calculations || []);
 
+      // Find whichever field contains 'current period' / 'previous period'
+      // Search across all possible field arrays Looker might use
+      var allCandidates = []
+        .concat(fields.dimensions || [])
+        .concat(fields.dimension_like || [])
+        .concat(fields.measures || [])
+        .concat(fields.table_calculations || []);
+
+      // Also brute-force check every key in the first data row
+      var rowKeys = data.length ? Object.keys(data[0]) : [];
+
+      var dimField    = null;
       var currentRow  = null;
       var previousRow = null;
-      data.forEach(function(row) {
-        var val = (row[dimField.name].value || '').toString().toLowerCase();
-        if (val === 'current period') currentRow  = row;
-        if (val === 'previous period') previousRow = row;
+
+      // First try known field objects
+      allCandidates.forEach(function(candidate) {
+        if (!candidate || !candidate.name) return;
+        data.forEach(function(row) {
+          var cell = row[candidate.name];
+          if (!cell) return;
+          var val = (cell.value || cell.rendered || '').toString().toLowerCase();
+          if (val === 'current period')  { currentRow  = row; dimField = candidate; }
+          if (val === 'previous period') { previousRow = row; dimField = candidate; }
+        });
       });
+
+      // Fallback: scan every key in the row directly
+      if (!dimField) {
+        rowKeys.forEach(function(key) {
+          data.forEach(function(row) {
+            var cell = row[key];
+            if (!cell || typeof cell !== 'object') return;
+            var val = (cell.value || cell.rendered || '').toString().toLowerCase();
+            if (val === 'current period')  { currentRow  = row; dimField = { name: key, label: key }; }
+            if (val === 'previous period') { previousRow = row; dimField = { name: key, label: key }; }
+          });
+        });
+      }
 
       if (!currentRow) { done(); return; }
 
