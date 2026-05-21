@@ -16,44 +16,34 @@ looker.plugins.visualizations.add({
       var pivots   = queryResponse.pivots;
       var measures = (fields.measures || []).concat(fields.table_calculations || []);
 
-      // Find whichever field contains 'current period' / 'previous period'
-      // Search across all possible field arrays Looker might use
+      // Row 1 = current (value), Row 2 = comparison
+      var currentRow    = data.length > 0 ? data[0] : null;
+      var previousRow   = data.length > 1 ? data[1] : null;
+
+      // Find the dimension field so we can label the comparison row
+      var dimField = null;
       var allCandidates = []
         .concat(fields.dimensions || [])
-        .concat(fields.dimension_like || [])
-        .concat(fields.measures || [])
-        .concat(fields.table_calculations || []);
-
-      // Also brute-force check every key in the first data row
-      var rowKeys = data.length ? Object.keys(data[0]) : [];
-
-      var dimField    = null;
-      var currentRow  = null;
-      var previousRow = null;
-
-      // First try known field objects
-      allCandidates.forEach(function(candidate) {
-        if (!candidate || !candidate.name) return;
-        data.forEach(function(row) {
-          var cell = row[candidate.name];
-          if (!cell) return;
-          var val = (cell.value || cell.rendered || '').toString().toLowerCase();
-          if (val === 'current period')  { currentRow  = row; dimField = candidate; }
-          if (val === 'previous period') { previousRow = row; dimField = candidate; }
-        });
-      });
-
-      // Fallback: scan every key in the row directly
-      if (!dimField) {
+        .concat(fields.dimension_like || []);
+      if (allCandidates.length) {
+        dimField = allCandidates[0];
+      } else {
+        // Fallback: find first key in row that has a string-like value
+        var rowKeys = currentRow ? Object.keys(currentRow) : [];
         rowKeys.forEach(function(key) {
-          data.forEach(function(row) {
-            var cell = row[key];
-            if (!cell || typeof cell !== 'object') return;
-            var val = (cell.value || cell.rendered || '').toString().toLowerCase();
-            if (val === 'current period')  { currentRow  = row; dimField = { name: key, label: key }; }
-            if (val === 'previous period') { previousRow = row; dimField = { name: key, label: key }; }
-          });
+          if (dimField) return;
+          var cell = currentRow[key];
+          if (cell && typeof cell === 'object' && typeof (cell.value || cell.rendered) === 'string') {
+            dimField = { name: key, label: key };
+          }
         });
+      }
+
+      // Get the comparison row's dimension label
+      var compLabel = 'comparison';
+      if (previousRow && dimField) {
+        var compCell = previousRow[dimField.name];
+        if (compCell) compLabel = compCell.rendered || compCell.value || 'comparison';
       }
 
       if (!currentRow) { done(); return; }
@@ -85,9 +75,9 @@ looker.plugins.visualizations.add({
             ? '<span class="kpi-arrow" style="color:#1e8c45;">▲</span>'
             : '<span class="kpi-arrow" style="color:#c0392b;">▼</span>';
           var diffStr = formatDiff(diff, currentRendered || previousRendered || '');
-          ppLine = '<div class="kpi-pp">' + arrow + ' ' + diffStr + ' vs prev. period</div>';
+          ppLine = '<div class="kpi-pp">' + arrow + ' ' + diffStr + ' vs ' + compLabel + '</div>';
         } else if (previousRow) {
-          ppLine = '<div class="kpi-pp">— vs prev. period</div>';
+          ppLine = '<div class="kpi-pp">— vs ' + compLabel + '</div>';
         }
 
         var card = document.createElement('div');
@@ -105,8 +95,10 @@ looker.plugins.visualizations.add({
         pivots.forEach(function(pivot) {
           var pivotKey     = pivot.key;
           var pivotLabel   = pivot.labels[Object.keys(pivot.labels)[0]] || pivotKey;
-          var currentCell  = currentRow[measure.name][pivotKey]  || {};
-          var previousCell = previousRow ? (previousRow[measure.name][pivotKey] || {}) : {};
+          var currentCellParent  = currentRow[measure.name] || {};
+          var previousCellParent = previousRow ? (previousRow[measure.name] || {}) : {};
+          var currentCell  = (typeof currentCellParent[pivotKey] === 'object' ? currentCellParent[pivotKey] : null) || {};
+          var previousCell = (typeof previousCellParent[pivotKey] === 'object' ? previousCellParent[pivotKey] : null) || {};
           container.appendChild(makeCard(pivotLabel, currentCell.value, currentCell.rendered, previousCell.value, previousCell.rendered));
         });
       } else {
