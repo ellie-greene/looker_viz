@@ -48,9 +48,6 @@ looker.plugins.visualizations.add({
 
       if (!currentRow) { done(); return; }
 
-      // DEBUG — remove after checking
-      container.innerHTML = '<pre style="font-size:10px; overflow:auto; white-space:pre-wrap;">' + JSON.stringify(Object.keys(currentRow), null, 2) + '</pre>';
-      done(); return;
 
       function formatDiff(diff, rendered) {
         // Sniff prefix (£, $, €) and suffix (%) from rendered string
@@ -96,28 +93,26 @@ looker.plugins.visualizations.add({
       // Build cards
       if (pivots && pivots.length > 0) {
         var measure = measures[0];
-        var isTableCalc = (fields.table_calculations || []).some(function(tc) { return tc.name === measure.name; });
-        pivots.forEach(function(pivot) {
-          var pivotKey   = pivot.key;
-          var pivotLabel = pivot.labels[Object.keys(pivot.labels)[0]] || pivotKey;
-          var currentCell, previousCell;
-          if (isTableCalc) {
-            // Table calcs in pivoted queries are stored flat: row[calc_name$$pivotKey] or row[calc_name_pivotKey]
-            // Try both separator styles Looker uses
-            var flatKey = measure.name + '$$' + pivotKey;
-            var flatKey2 = measure.name + '_' + pivotKey;
-            var cRaw = currentRow[flatKey] || currentRow[flatKey2] || {};
-            var pRaw = previousRow ? (previousRow[flatKey] || previousRow[flatKey2] || {}) : {};
-            currentCell  = (typeof cRaw === 'object' ? cRaw : {});
-            previousCell = (typeof pRaw === 'object' ? pRaw : {});
-          } else {
+        var tableCalcNames = (fields.table_calculations || []).map(function(tc) { return tc.name; });
+        var isTableCalc = tableCalcNames.indexOf(measure.name) >= 0;
+
+        if (isTableCalc) {
+          // Table calcs in pivoted queries are stored as a single flat key per row — one card only
+          var currentCell  = currentRow[measure.name]  || {};
+          var previousCell = previousRow ? (previousRow[measure.name] || {}) : {};
+          var label = measure.label_short || measure.label || measure.name;
+          container.appendChild(makeCard(label, currentCell.value, currentCell.rendered, previousCell.value, previousCell.rendered));
+        } else {
+          pivots.forEach(function(pivot) {
+            var pivotKey   = pivot.key;
+            var pivotLabel = pivot.labels[Object.keys(pivot.labels)[0]] || pivotKey;
             var currentCellParent  = currentRow[measure.name] || {};
             var previousCellParent = previousRow ? (previousRow[measure.name] || {}) : {};
-            currentCell  = (typeof currentCellParent[pivotKey] === 'object' ? currentCellParent[pivotKey] : null) || {};
-            previousCell = (typeof previousCellParent[pivotKey] === 'object' ? previousCellParent[pivotKey] : null) || {};
-          }
-          container.appendChild(makeCard(pivotLabel, currentCell.value, currentCell.rendered, previousCell.value, previousCell.rendered));
-        });
+            var currentCell  = (typeof currentCellParent[pivotKey] === 'object' ? currentCellParent[pivotKey] : null) || {};
+            var previousCell = (typeof previousCellParent[pivotKey] === 'object' ? previousCellParent[pivotKey] : null) || {};
+            container.appendChild(makeCard(pivotLabel, currentCell.value, currentCell.rendered, previousCell.value, previousCell.rendered));
+          });
+        }
       } else {
         measures.forEach(function(measure) {
           var currentCell  = currentRow[measure.name]  || {};
