@@ -48,12 +48,6 @@ looker.plugins.visualizations.add({
 
       if (!currentRow) { done(); return; }
 
-      // DEBUG
-      container.innerHTML = '<pre style="font-size:10px; overflow:auto; white-space:pre-wrap;">' +
-        'pivots: ' + JSON.stringify(pivots, null, 2).slice(0, 800) + '\n\n' +
-        'previousRow sample: ' + JSON.stringify(previousRow, null, 2).slice(0, 500) +
-        '</pre>';
-      done(); return;
 
 
 
@@ -179,3 +173,4 @@ looker.plugins.visualizations.add({
     done();
   }
 });
+
