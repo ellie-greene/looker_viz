@@ -92,13 +92,26 @@ looker.plugins.visualizations.add({
       // Build cards
       if (pivots && pivots.length > 0) {
         var measure = measures[0];
+        var isTableCalc = (fields.table_calculations || []).some(function(tc) { return tc.name === measure.name; });
         pivots.forEach(function(pivot) {
-          var pivotKey     = pivot.key;
-          var pivotLabel   = pivot.labels[Object.keys(pivot.labels)[0]] || pivotKey;
-          var currentCellParent  = currentRow[measure.name] || {};
-          var previousCellParent = previousRow ? (previousRow[measure.name] || {}) : {};
-          var currentCell  = (typeof currentCellParent[pivotKey] === 'object' ? currentCellParent[pivotKey] : null) || {};
-          var previousCell = (typeof previousCellParent[pivotKey] === 'object' ? previousCellParent[pivotKey] : null) || {};
+          var pivotKey   = pivot.key;
+          var pivotLabel = pivot.labels[Object.keys(pivot.labels)[0]] || pivotKey;
+          var currentCell, previousCell;
+          if (isTableCalc) {
+            // Table calcs in pivoted queries are stored flat: row[calc_name$$pivotKey] or row[calc_name_pivotKey]
+            // Try both separator styles Looker uses
+            var flatKey = measure.name + '$$' + pivotKey;
+            var flatKey2 = measure.name + '_' + pivotKey;
+            var cRaw = currentRow[flatKey] || currentRow[flatKey2] || {};
+            var pRaw = previousRow ? (previousRow[flatKey] || previousRow[flatKey2] || {}) : {};
+            currentCell  = (typeof cRaw === 'object' ? cRaw : {});
+            previousCell = (typeof pRaw === 'object' ? pRaw : {});
+          } else {
+            var currentCellParent  = currentRow[measure.name] || {};
+            var previousCellParent = previousRow ? (previousRow[measure.name] || {}) : {};
+            currentCell  = (typeof currentCellParent[pivotKey] === 'object' ? currentCellParent[pivotKey] : null) || {};
+            previousCell = (typeof previousCellParent[pivotKey] === 'object' ? previousCellParent[pivotKey] : null) || {};
+          }
           container.appendChild(makeCard(pivotLabel, currentCell.value, currentCell.rendered, previousCell.value, previousCell.rendered));
         });
       } else {
