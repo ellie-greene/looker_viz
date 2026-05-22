@@ -60,6 +60,17 @@ const lineChartBreakdownViz = {
     const xDimField      = dims[0];
     const breakdownField = dims[1];
 
+    // DEBUG
+    wrap.innerHTML = '<pre style="font-size:10px; overflow:auto; white-space:pre-wrap;">' +
+      'dims: ' + JSON.stringify(dims.map(d => d.name)) + '\n' +
+      'measures: ' + JSON.stringify(measures.map(m => m.name)) + '\n' +
+      'rows: ' + data.length + '\n' +
+      'row0 keys: ' + JSON.stringify(Object.keys(data[0])) + '\n' +
+      'row0 xDim: ' + JSON.stringify(data[0][xDimField.name]) + '\n' +
+      'row0 breakdown: ' + JSON.stringify(data[0][breakdownField.name]) +
+      '</pre>';
+    done(); return;
+
     // Brand palette
     const PALETTE = [
       "#713170", "#274C46", "#F2A900", "#96A44F", "#BE0021",
