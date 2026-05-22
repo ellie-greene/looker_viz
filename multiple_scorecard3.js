@@ -1,25 +1,25 @@
 looker.plugins.visualizations.add({
   options: {},
- 
+
   create: function(element, config) {
     element.innerHTML = '<div id="one-line-kpi-container" style="height:100%; display:flex; align-items:stretch; justify-content:center; flex-wrap:nowrap; gap:8px; padding:12px; box-sizing:border-box; overflow:hidden;"></div>';
   },
- 
+
   updateAsync: function(data, element, config, queryResponse, details, done) {
     var container = element.querySelector('#one-line-kpi-container');
     container.innerHTML = '';
- 
+
     try {
       if (!data || data.length === 0) { done(); return; }
- 
+
       var fields   = queryResponse.fields;
       var pivots   = queryResponse.pivots;
       var measures = (fields.measures || []).concat(fields.table_calculations || []);
- 
+
       // Row 1 = current (value), Row 2 = comparison
       var currentRow    = data.length > 0 ? data[0] : null;
       var previousRow   = data.length > 1 ? data[1] : null;
- 
+
       // Find the dimension field so we can label the comparison row
       var dimField = null;
       var allCandidates = []
@@ -38,18 +38,25 @@ looker.plugins.visualizations.add({
           }
         });
       }
- 
+
       // Get the comparison row's dimension label
       var compLabel = 'comparison';
       if (previousRow && dimField) {
         var compCell = previousRow[dimField.name];
         if (compCell) compLabel = compCell.rendered || compCell.value || 'comparison';
       }
- 
+
       if (!currentRow) { done(); return; }
- 
- 
- 
+
+      // DEBUG
+      container.innerHTML = '<pre style="font-size:10px; overflow:auto; white-space:pre-wrap;">' +
+        'pivots: ' + JSON.stringify(pivots, null, 2).slice(0, 800) + '\n\n' +
+        'previousRow sample: ' + JSON.stringify(previousRow, null, 2).slice(0, 500) +
+        '</pre>';
+      done(); return;
+
+
+
       function formatDiff(diff, rendered) {
         // Sniff prefix (£, $, €) and suffix (%) from rendered string
         var prefix = '', suffix = '';
@@ -58,7 +65,7 @@ looker.plugins.visualizations.add({
         var sufMatch = r.match(/([^0-9,.]+)$/);
         if (preMatch) prefix = preMatch[1];
         if (sufMatch && sufMatch[1] !== prefix) suffix = sufMatch[1];
- 
+
         // Match decimal places from rendered
         var decimals = (r.match(/\.(\d+)/) || [, ''])[1].length;
         var abs = Math.abs(diff);
@@ -68,7 +75,7 @@ looker.plugins.visualizations.add({
         parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
         return sign + prefix + parts.join('.') + suffix;
       }
- 
+
       function makeCard(label, currentVal, currentRendered, previousVal, previousRendered) {
         var ppLine = '';
         if (previousRow && previousVal != null && currentVal != null) {
@@ -81,7 +88,7 @@ looker.plugins.visualizations.add({
         } else if (previousRow) {
           ppLine = '<div class="kpi-pp">— vs ' + compLabel + '</div>';
         }
- 
+
         var card = document.createElement('div');
         card.className = 'kpi-card';
         card.innerHTML =
@@ -90,13 +97,13 @@ looker.plugins.visualizations.add({
           ppLine;
         return card;
       }
- 
+
       // Build cards
       if (pivots && pivots.length > 0) {
         var measure = measures[0];
         var tableCalcNames = (fields.table_calculations || []).map(function(tc) { return tc.name; });
         var isTableCalc = tableCalcNames.indexOf(measure.name) >= 0;
- 
+
         // Both regular measures and table calcs use pivot key nesting
         pivots.forEach(function(pivot) {
           var pivotKey   = pivot.key;
@@ -115,7 +122,7 @@ looker.plugins.visualizations.add({
           container.appendChild(makeCard(label, currentCell.value, currentCell.rendered, previousCell.value, previousCell.rendered));
         });
       }
- 
+
       // ── Responsive font scaling via ResizeObserver ──
       // Base sizes at 160px card width; scale linearly with actual card width
       function scaleFonts() {
@@ -123,14 +130,14 @@ looker.plugins.visualizations.add({
         if (!cards.length) return;
         var cardWidth = cards[0].offsetWidth;
         if (!cardWidth) return;
- 
+
         // At 160px wide → value 1.6em, label 0.75em, pp 0.7em
         // At 240px wide → value 2.4em, label 0.85em, pp 0.78em
         var ratio       = Math.min(Math.max(cardWidth / 160, 0.6), 2.0);
         var valueSize   = (1.6  * ratio).toFixed(2) + 'em';
         var labelSize   = (0.75 * ratio).toFixed(2) + 'em';
         var ppSize      = (0.70 * ratio).toFixed(2) + 'em';
- 
+
         cards.forEach(function(card) {
           var v = card.querySelector('.kpi-value');
           var l = card.querySelector('.kpi-label');
@@ -140,7 +147,7 @@ looker.plugins.visualizations.add({
           if (p) p.style.fontSize = ppSize;
         });
       }
- 
+
       // Inject base styles once
       if (!element.querySelector('#kpi-styles')) {
         var style = document.createElement('style');
@@ -156,7 +163,7 @@ looker.plugins.visualizations.add({
         ].join('\n');
         element.appendChild(style);
       }
- 
+
       // Scale immediately, then watch for resize
       setTimeout(scaleFonts, 0);
       if (window.ResizeObserver) {
@@ -164,11 +171,11 @@ looker.plugins.visualizations.add({
         element._kpiObserver = new ResizeObserver(scaleFonts);
         element._kpiObserver.observe(container);
       }
- 
+
     } catch(e) {
       container.innerHTML = '<div style="color:red;font-family:Google Sans,Roboto,sans-serif;padding:16px;font-size:0.85em;"><strong>ERROR:</strong> ' + e.message + '</div>';
     }
- 
+
     done();
   }
 });
