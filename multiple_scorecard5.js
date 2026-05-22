@@ -52,7 +52,6 @@ looker.plugins.visualizations.add({
 
 
       function formatDiff(diff, rendered) {
-        // Sniff prefix (£, $, €) and suffix (%) from rendered string
         var prefix = '', suffix = '';
         var r = rendered || '';
         var preMatch = r.match(/^([^0-9\-(]+)/);
@@ -60,11 +59,17 @@ looker.plugins.visualizations.add({
         if (preMatch) prefix = preMatch[1];
         if (sufMatch && sufMatch[1] !== prefix) suffix = sufMatch[1];
 
-        // Match decimal places from rendered
+        // Percentage values: raw diff is fractional (e.g. -0.005), show as pp
+        if (suffix === '%') {
+          var absPp   = Math.abs(diff * 100);
+          var decimals = absPp < 1 ? 1 : 0;
+          return (diff >= 0 ? '+' : '-') + absPp.toFixed(decimals) + 'pp';
+        }
+
+        // All other values
         var decimals = (r.match(/\.(\d+)/) || [, ''])[1].length;
-        var abs = Math.abs(diff);
+        var abs  = Math.abs(diff);
         var sign = diff >= 0 ? '+' : '-';
-        // Add thousands separator
         var parts = abs.toFixed(decimals).split('.');
         parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
         return sign + prefix + parts.join('.') + suffix;
@@ -173,4 +178,3 @@ looker.plugins.visualizations.add({
     done();
   }
 });
-
