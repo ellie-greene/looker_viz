@@ -48,6 +48,10 @@ looker.plugins.visualizations.add({
 
       if (!currentRow) { done(); return; }
 
+      // DEBUG — remove after checking
+      container.innerHTML = '<pre style="font-size:10px; overflow:auto; white-space:pre-wrap;">' + JSON.stringify(Object.keys(currentRow), null, 2) + '</pre>';
+      done(); return;
+
       function formatDiff(diff, rendered) {
         // Sniff prefix (£, $, €) and suffix (%) from rendered string
         var prefix = '', suffix = '';
