@@ -48,6 +48,14 @@ looker.plugins.visualizations.add({
 
       if (!currentRow) { done(); return; }
 
+      // DEBUG
+      container.innerHTML = '<pre style="font-size:10px; overflow:auto; white-space:pre-wrap;">' + 
+        'measures: ' + JSON.stringify(measures.map(function(m){ return {name:m.name, label:m.label}; }), null, 2) + '\n\n' +
+        'tableCalcs: ' + JSON.stringify((fields.table_calculations||[]).map(function(m){ return m.name; }), null, 2) + '\n\n' +
+        'currentRow sample: ' + JSON.stringify(currentRow, null, 2).slice(0, 500) +
+        '</pre>';
+      done(); return;
+
 
       function formatDiff(diff, rendered) {
         // Sniff prefix (£, $, €) and suffix (%) from rendered string
