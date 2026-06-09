@@ -20,6 +20,7 @@ looker.plugins.visualizations.add({
       var targetField = allFields.find(function(f) {
         return f.name.toLowerCase().includes('target') || (f.label_short || f.label || '').toLowerCase().includes('target');
       }) || null;
+      var isLowGood = targetField ? targetField.name.toLowerCase().includes('_low_') : false;
       var ppField = allFields.find(function(f) {
         return f.name.toLowerCase().includes('pp_perc') || (f.label_short || f.label || '').toLowerCase().includes('pp_perc');
       }) || null;
@@ -34,16 +35,22 @@ looker.plugins.visualizations.add({
       if (ppField) {
         var ppValue    = row[ppField.name].value;
         var ppRendered = row[ppField.name].rendered || (ppValue * 100).toFixed(1) + '%';
-        var ppArrow    = ppValue >= 0
-          ? '<span style="color:green;">▲</span>'
-          : '<span style="color:red;">▼</span>';
+        var ppGood;
+        if (isLowGood) {
+          ppGood = ppValue < 0 ? 'good' : ppValue <= 0.05 ? 'neutral' : 'bad';
+        } else {
+          ppGood = ppValue >= 0 ? 'good' : ppValue >= -0.05 ? 'neutral' : 'bad';
+        }
+        var ppColour = ppGood === 'good' ? 'green' : ppGood === 'neutral' ? 'orange' : 'red';
+        var ppArrow = ppValue >= 0
+          ? '<span style="color:' + ppColour + ';">▲</span>'
+          : '<span style="color:' + ppColour + ';">▼</span>';
         ppLine = '<div style="font-size:0.85em; color:#696969; margin-top:2px;">' + ppArrow + ' ' + ppRendered + ' vs prev. period</div>';
       }
       var targetLine = '';
       if (targetField) {
         var targetValue    = row[targetField.name].value;
         var targetRendered = row[targetField.name].rendered || (targetValue * 100).toFixed(1) + '%';
-        var isLowGood = targetField.name.toLowerCase().includes('_low_');
         var targetEmoji;
         if (isLowGood) {
           targetEmoji = targetValue < 0 ? '🟢' : targetValue <= 0.05 ? '🟡' : '🔴';
