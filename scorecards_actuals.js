@@ -38,6 +38,7 @@ looker.plugins.visualizations.add({
       }) || null;
 
       var mainValue = row[mainField.name].rendered || row[mainField.name].value;
+      var isLowGood = targetActualField ? targetActualField.name.toLowerCase().includes('_low_') : false;
 
       var ppLine = '';
       if (ppActualField) {
@@ -45,9 +46,16 @@ looker.plugins.visualizations.add({
         var ppActualRendered = row[ppActualField.name].rendered != null
           ? (ppActualValue >= 0 ? '+' : '') + row[ppActualField.name].rendered
           : (ppActualValue >= 0 ? '+' : '') + row[ppActualField.name].value;
+        var ppGood;
+        if (isLowGood) {
+          ppGood = ppActualValue < 0 ? 'good' : 'bad';
+        } else {
+          ppGood = ppActualValue >= 0 ? 'good' : 'bad';
+        }
+        var ppColour = ppGood === 'good' ? 'green' : 'red';
         var ppArrow = ppActualValue >= 0
-          ? '<span style="color:green;">▲</span>'
-          : '<span style="color:red;">▼</span>';
+          ? '<span style="color:' + ppColour + ';">▲</span>'
+          : '<span style="color:' + ppColour + ';">▼</span>';
         var isPpPercMetric = ppActualField.name.toLowerCase().includes('_perc');
         var ppActualLabel = isPpPercMetric
           ? ppActualRendered + '%p vs prev. period'
@@ -66,7 +74,6 @@ looker.plugins.visualizations.add({
         var targetActualRendered = row[targetActualField.name].rendered != null
           ? (targetActualValue >= 0 ? '+' : '') + row[targetActualField.name].rendered
           : (targetActualValue >= 0 ? '+' : '') + row[targetActualField.name].value;
-        var isLowGood = targetActualField.name.toLowerCase().includes('_low_');
         var emojiValue = targetPercField ? row[targetPercField.name].value : (targetActualValue >= 0 ? 1 : -1);
         var targetEmoji;
         if (isLowGood) {
