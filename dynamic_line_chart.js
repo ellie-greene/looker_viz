@@ -45,6 +45,13 @@ const lineChartViz = {
 
   updateAsync: function(data, element, config, queryResponse, details, done) {
     const wrap = this._wrap;
+
+    // ── persist selections across filter changes ──
+    const existingSel  = wrap.querySelector('#lc-sel-primary');
+    const existingSel2 = wrap.querySelector('#lc-sel-compare');
+    const savedPrimary = existingSel  ? existingSel.value  : '0';
+    const savedCompare = existingSel2 ? existingSel2.value : '-1';
+
     wrap.innerHTML = "";
 
     const dims = queryResponse.fields.dimensions || [];
@@ -69,6 +76,7 @@ const lineChartViz = {
     lbl.textContent = "Metric";
     controls.appendChild(lbl);
     const sel = document.createElement("select");
+    sel.id = "lc-sel-primary";
     measures.forEach((m, i) => {
       const o = document.createElement("option");
       o.value = i;
@@ -82,6 +90,7 @@ const lineChartViz = {
     lbl2.textContent = "Compare to";
     controls.appendChild(lbl2);
     const sel2 = document.createElement("select");
+    sel2.id = "lc-sel-compare";
     const noneOpt = document.createElement("option");
     noneOpt.value = "-1";
     noneOpt.textContent = "None";
@@ -93,6 +102,12 @@ const lineChartViz = {
       sel2.appendChild(o);
     });
     controls.appendChild(sel2);
+
+    // Restore saved selections
+    sel.value  = savedPrimary;
+    if (sel.value  === "") sel.value  = "0";
+    sel2.value = savedCompare;
+    if (sel2.value === "") sel2.value = "-1";
 
     // Legend placeholder
     const legend = document.createElement("div");
@@ -227,7 +242,6 @@ const lineChartViz = {
       }
 
       const hasComp = measure2 && points2 && points2.filter(p => p.y !== null).length > 0;
-      const separateAxes = hasComp;
 
       // Y ranges
       const validY = points.filter(p => p.y !== null).map(p => p.y);
@@ -386,8 +400,8 @@ const lineChartViz = {
     }
 
     renderChart(parseInt(sel.value) || 0, parseInt(sel2.value));
-    sel.addEventListener("change", () => renderChart(parseInt(sel.value), parseInt(sel2.value)));
-    sel2.addEventListener("change", () => renderChart(parseInt(sel.value), parseInt(sel2.value)));
+    sel.addEventListener("change",  () => renderChart(parseInt(sel.value),  parseInt(sel2.value)));
+    sel2.addEventListener("change", () => renderChart(parseInt(sel.value),  parseInt(sel2.value)));
     done();
   }
 };
