@@ -54,18 +54,9 @@ looker.plugins.visualizations.add({
         } else if (/face.*(2|to).*face|f2f/i.test(filterValue)) {
           sgColour = '#D93025';
         }
-         if (sgColour) {
-          sourceGroupLine =
-            '<div style="' +
-              'display:inline-block;' +
-              'font-size:12px;' +
-              'font-weight:600;' +
-              'color:' + sgColour + ';' +
-              'border-radius:3px;' +
-              'padding:1px 6px;' +
-              'margin-bottom:5px;' +
-              'letter-spacing:0.03em;' +
-            '">' + filterValue + '</div>';
+        if (sgColour) {
+          var displayValue = filterValue.charAt(0).toUpperCase() + filterValue.slice(1);
+          sourceGroupLine = '<div style="display:inline-block; font-size:12px; font-weight:600; color:' + sgColour + '; margin-bottom:2px; letter-spacing:0.03em;">' + displayValue + '</div>';
         }
       }
       // ──────────────────────────────────────────────────────────────────────
