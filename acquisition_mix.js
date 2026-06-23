@@ -24,10 +24,14 @@ const acquisitionMixViz = {
       .am-wrap { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 12px 16px; box-sizing: border-box; height: 100%; overflow-y: auto; }
       .am-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
       .am-title { font-size: 12px; font-weight: 600; color: #444; text-transform: uppercase; letter-spacing: 0.04em; }
+      .am-threshold-ctrl { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #888; }
+      .am-threshold-btn { width: 18px; height: 18px; border-radius: 3px; border: 1px solid #ddd; background: #fff; color: #555; font-size: 13px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+      .am-threshold-btn:hover { background: #f4f4f4; }
+      .am-threshold-val { font-variant-numeric: tabular-nums; min-width: 28px; text-align: center; color: #444; font-weight: 500; }
       .am-anomalies { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; min-height: 22px; }
       .am-pill { font-size: 11px; padding: 2px 8px; border-radius: 20px; display: inline-flex; align-items: center; gap: 3px; }
-      .am-pill-high { background: #fdf0cc; color: #553527; }
-      .am-pill-low  { background: #f5e8f0; color: #7c1334; }
+      .am-pill-high { background: #fde8dd; color: #E65A1E; }
+      .am-pill-low  { background: #eef3e4; color: #556041; }
       .am-pill-ok   { font-size: 11px; color: #aaa; }
       .am-rows { display: flex; flex-direction: column; gap: 6px; }
       .am-row { display: flex; align-items: center; gap: 8px; position: relative; }
@@ -37,16 +41,16 @@ const acquisitionMixViz = {
       .am-needle { position: absolute; top: -3px; width: 2px; height: 14px; background: #555; border-radius: 1px; z-index: 2; }
       .am-pct { font-size: 11px; width: 32px; text-align: right; flex-shrink: 0; color: #333; font-variant-numeric: tabular-nums; }
       .am-delta { font-size: 10px; font-weight: 500; padding: 1px 5px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; min-width: 44px; text-align: center; }
-      .am-delta-high { background: #fdf0cc; color: #553527; }
-      .am-delta-low  { background: #f5e8f0; color: #7c1334; }
+      .am-delta-high { background: #fde8dd; color: #E65A1E; }
+      .am-delta-low  { background: #eef3e4; color: #556041; }
       .am-delta-ok   { background: #f4f4f4; color: #999; }
       .am-tooltip { position: fixed; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 11px; font-size: 11px; pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; z-index: 9999; min-width: 160px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
       .am-tooltip-title { font-weight: 600; color: #222; margin-bottom: 5px; font-size: 12px; }
       .am-tooltip-row { display: flex; justify-content: space-between; gap: 16px; color: #555; margin-top: 3px; }
       .am-tooltip-label { color: #999; }
       .am-tooltip-val { font-weight: 500; color: #222; font-variant-numeric: tabular-nums; }
-      .am-tooltip-delta-high { color: #553527; font-weight: 600; }
-      .am-tooltip-delta-low  { color: #7c1334; font-weight: 600; }
+      .am-tooltip-delta-high { color: #E65A1E; font-weight: 600; }
+      .am-tooltip-delta-low  { color: #556041; font-weight: 600; }
       .am-tooltip-delta-ok   { color: #999; }
       .am-legend { display: flex; gap: 14px; margin-top: 12px; font-size: 10px; color: #999; flex-wrap: wrap; align-items: center; }
       .am-legend-item { display: flex; align-items: center; gap: 4px; }
@@ -58,7 +62,6 @@ const acquisitionMixViz = {
 
     const tooltip = document.createElement("div");
     tooltip.className = "am-tooltip";
-    tooltip.id = "am-tooltip-" + Math.random().toString(36).slice(2);
     document.body.appendChild(tooltip);
     this._tooltip = tooltip;
 
@@ -66,31 +69,36 @@ const acquisitionMixViz = {
     wrap.className = "am-wrap";
     element.appendChild(wrap);
     this._wrap = wrap;
+    this._liveThreshold = null;
   },
 
   updateAsync: function(data, element, config, queryResponse, details, done) {
     const wrap    = this._wrap;
     const tooltip = this._tooltip;
-    wrap.innerHTML = "";
-
-    const PALETTE = [
-      "#713170", "#F2A900", "#96A34F", "#274C46", "#553527",
-      "#BE0021", "#FFB4A8", "#E65A1E", "#556041", "#7C1334", "#EAE5DC"
-    ];
+    const self    = this;
 
     const dims     = queryResponse.fields.dimensions || [];
     const measures = (queryResponse.fields.measures || []).concat(queryResponse.fields.table_calculations || []);
+
+    // Live threshold: preserved across re-renders, seeded from config on first load
+    const configDefault = config.threshold != null ? Number(config.threshold) : 5;
+    if (this._liveThreshold === null) this._liveThreshold = configDefault;
+    let threshold = this._liveThreshold;
+
+    wrap.innerHTML = "";
 
     if (!dims.length || measures.length < 2 || !data.length) {
       wrap.innerHTML = `<div class="am-debug">Add one dimension (segment) and two measures: current period trialists + 8-week rolling trialists.</div>`;
       done(); return;
     }
 
-    const threshold = config.threshold != null ? Number(config.threshold) : 5;
-    const dimField  = dims[0];
-    const mCurrent  = measures[0];
-    const mRolling  = measures[1];
+    const dimField      = dims[0];
+    const mCurrent      = measures[0];
+    const mRolling      = measures[1];
+    const mCurrentLabel = mCurrent.label_short || mCurrent.label || "This week";
+    const mRollingLabel = mRolling.label_short || mRolling.label || "8-week avg";
 
+    // Parse rows
     const rows = data.map(row => {
       const segCell     = row[dimField.name];
       const currentCell = row[mCurrent.name];
@@ -117,16 +125,50 @@ const acquisitionMixViz = {
       r.delta       = r.currentPct - r.baselinePct;
     });
 
-    // Header
+    // ── Header: title + threshold control ──
     const header = document.createElement("div");
     header.className = "am-header";
+
     const titleEl = document.createElement("div");
     titleEl.className = "am-title";
     titleEl.textContent = config.dimension_label || (dimField.label_short || dimField.label || "");
+
+    const ctrl = document.createElement("div");
+    ctrl.className = "am-threshold-ctrl";
+
+    const btnDown = document.createElement("button");
+    btnDown.className = "am-threshold-btn";
+    btnDown.textContent = "−";
+    btnDown.title = "Lower threshold";
+    btnDown.addEventListener("click", function() {
+      if (self._liveThreshold > 1) {
+        self._liveThreshold -= 1;
+        self.updateAsync(data, element, config, queryResponse, details, done);
+      }
+    });
+
+    const valEl = document.createElement("span");
+    valEl.className = "am-threshold-val";
+    valEl.textContent = "±" + threshold + "pp";
+
+    const btnUp = document.createElement("button");
+    btnUp.className = "am-threshold-btn";
+    btnUp.textContent = "+";
+    btnUp.title = "Raise threshold";
+    btnUp.addEventListener("click", function() {
+      self._liveThreshold += 1;
+      self.updateAsync(data, element, config, queryResponse, details, done);
+    });
+
+    ctrl.appendChild(btnDown);
+    ctrl.appendChild(valEl);
+    ctrl.appendChild(btnUp);
+
     header.appendChild(titleEl);
+    header.appendChild(ctrl);
     wrap.appendChild(header);
 
-    // Anomaly pills
+    // ── Anomaly pills ──
     const anomalies = rows.filter(r => Math.abs(r.delta) >= threshold);
     const pillStrip = document.createElement("div");
     pillStrip.className = "am-anomalies";
@@ -137,7 +179,7 @@ const acquisitionMixViz = {
       pillStrip.appendChild(ok);
     } else {
       anomalies.forEach(r => {
-        const pill  = document.createElement("span");
+        const pill = document.createElement("span");
         pill.className = "am-pill " + (r.delta > 0 ? "am-pill-high" : "am-pill-low");
         const arrow = r.delta > 0 ? "▲" : "▼";
         const sign  = r.delta > 0 ? "+" : "";
@@ -147,15 +189,12 @@ const acquisitionMixViz = {
     }
     wrap.appendChild(pillStrip);
 
-    // Rows
+    // ── Rows ──
     const rowsEl = document.createElement("div");
     rowsEl.className = "am-rows";
 
-    const mCurrentLabel = mCurrent.label_short || mCurrent.label || "This week";
-    const mRollingLabel = mRolling.label_short || mRolling.label || "8-week avg";
-
-    rows.forEach((r, i) => {
-      const barColor   = PALETTE[i % PALETTE.length];
+    rows.forEach(r => {
+      const barColor   = r.delta >= threshold ? "#E65A1E" : r.delta <= -threshold ? "#96A34F" : "#B4B2A9";
       const deltaClass = r.delta >= threshold ? "am-delta-high" : r.delta <= -threshold ? "am-delta-low" : "am-delta-ok";
       const sign       = r.delta > 0 ? "+" : "";
 
@@ -183,24 +222,21 @@ const acquisitionMixViz = {
       track.appendChild(bar);
       track.appendChild(needle);
 
-      // Tooltip
       track.addEventListener("mouseenter", function(e) {
-        const tooltipDeltaClass = r.delta >= threshold ? "am-tooltip-delta-high" : r.delta <= -threshold ? "am-tooltip-delta-low" : "am-tooltip-delta-ok";
-        const arrow = r.delta > 0 ? "▲" : r.delta < 0 ? "▼" : "–";
+        const tdClass = r.delta >= threshold ? "am-tooltip-delta-high" : r.delta <= -threshold ? "am-tooltip-delta-low" : "am-tooltip-delta-ok";
+        const arrow   = r.delta > 0 ? "▲" : r.delta < 0 ? "▼" : "–";
         tooltip.innerHTML = `
           <div class="am-tooltip-title">${r.seg}</div>
           <div class="am-tooltip-row"><span class="am-tooltip-label">${mCurrentLabel}</span><span class="am-tooltip-val">${r.currentPct.toFixed(1)}% (${r.current.toLocaleString()})</span></div>
           <div class="am-tooltip-row"><span class="am-tooltip-label">${mRollingLabel}</span><span class="am-tooltip-val">${r.baselinePct.toFixed(1)}%</span></div>
-          <div class="am-tooltip-row"><span class="am-tooltip-label">vs avg</span><span class="am-tooltip-val ${tooltipDeltaClass}">${arrow} ${sign}${r.delta.toFixed(1)}pp</span></div>
+          <div class="am-tooltip-row"><span class="am-tooltip-label">vs avg</span><span class="am-tooltip-val ${tdClass}">${arrow} ${sign}${r.delta.toFixed(1)}pp</span></div>
         `;
         tooltip.style.display = "block";
       });
       track.addEventListener("mousemove", function(e) {
-        const pad = 12;
-        let left = e.clientX + pad;
-        let top  = e.clientY + pad;
-        const tw = 180;
-        if (left + tw > window.innerWidth) left = e.clientX - tw - pad;
+        let left = e.clientX + 12;
+        let top  = e.clientY + 12;
+        if (left + 180 > window.innerWidth) left = e.clientX - 192;
         tooltip.style.left = left + "px";
         tooltip.style.top  = top  + "px";
       });
@@ -233,7 +269,7 @@ const acquisitionMixViz = {
 
     wrap.appendChild(rowsEl);
 
-    // Legend
+    // ── Legend ──
     const legend = document.createElement("div");
     legend.className = "am-legend";
     legend.innerHTML = `
