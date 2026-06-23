@@ -54,17 +54,16 @@ looker.plugins.visualizations.add({
         } else if (/face.*(2|to).*face|f2f/i.test(filterValue)) {
           sgColour = '#D93025';
         }
-        if (sgColour) {
+         if (sgColour) {
           sourceGroupLine =
             '<div style="' +
               'display:inline-block;' +
-              'font-size:0.72em;' +
+              'font-size:12px;' +
               'font-weight:600;' +
               'color:' + sgColour + ';' +
-              'border:1.5px solid ' + sgColour + ';' +
               'border-radius:3px;' +
               'padding:1px 6px;' +
-              'margin-top:5px;' +
+              'margin-bottom:5px;' +
               'letter-spacing:0.03em;' +
             '">' + filterValue + '</div>';
         }
