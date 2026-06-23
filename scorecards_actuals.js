@@ -12,7 +12,9 @@ looker.plugins.visualizations.add({
         .concat(fields.dimensions || [])
         .concat(fields.table_calculations || []);
       if (allFields.length === 0) { done(); return; }
-
+      
+      var subtitleField = allFields.find(function(f) {
+        return f.name.toLowerCase().includes('_subtitle');
       var mainField        = allFields[0];
       var targetActualField = allFields.find(function(f) {
         return f.name.toLowerCase().includes('target_actual') || (f.label_short || f.label || '').toLowerCase().includes('target_actual');
@@ -30,8 +32,7 @@ looker.plugins.visualizations.add({
         return (name.includes('pp_perc') && !name.includes('pp_actual')) ||
                (f.label_short || f.label || '').toLowerCase().includes('pp_perc');
       }) || null;
-      var subtitleField = allFields.find(function(f) {
-        return f.name.toLowerCase().includes('_subtitle');
+
       }) || null;
       var linkField = allFields.find(function(f) {
         return f.name.toLowerCase().includes('_link');
