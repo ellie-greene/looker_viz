@@ -40,6 +40,37 @@ looker.plugins.visualizations.add({
       var mainValue = row[mainField.name].rendered || row[mainField.name].value;
       var isLowGood = targetActualField ? targetActualField.name.toLowerCase().includes('_low_') : false;
 
+      // ── source_group filter badge ──────────────────────────────────────────
+      var sourceGroupLine = '';
+      var appliedFilters = queryResponse.applied_filters || {};
+      var sourceGroupFilter = Object.keys(appliedFilters).find(function(k) {
+        return k.toLowerCase().includes('source_group');
+      });
+      if (sourceGroupFilter) {
+        var filterValue = (appliedFilters[sourceGroupFilter].value || '').trim();
+        var sgColour = null;
+        if (/digital/i.test(filterValue)) {
+          sgColour = '#1A73E8';
+        } else if (/face.*(2|to).*face|f2f/i.test(filterValue)) {
+          sgColour = '#D93025';
+        }
+        if (sgColour) {
+          sourceGroupLine =
+            '<div style="' +
+              'display:inline-block;' +
+              'font-size:0.72em;' +
+              'font-weight:600;' +
+              'color:' + sgColour + ';' +
+              'border:1.5px solid ' + sgColour + ';' +
+              'border-radius:3px;' +
+              'padding:1px 6px;' +
+              'margin-top:5px;' +
+              'letter-spacing:0.03em;' +
+            '">' + filterValue + '</div>';
+        }
+      }
+      // ──────────────────────────────────────────────────────────────────────
+
       var ppLine = '';
       if (ppActualField) {
         var ppActualValue    = row[ppActualField.name].value;
@@ -112,6 +143,7 @@ looker.plugins.visualizations.add({
       container.innerHTML =
         '<div style="text-align:center; font-family: Google Sans, Roboto, sans-serif;">' +
           '<div style="font-size:2.5em; font-weight:600; color:#282828;">' + mainValue + '</div>' +
+          sourceGroupLine +
           subtitleLine +
           targetLine +
           ppLine +
