@@ -56,7 +56,7 @@ looker.plugins.visualizations.add({
         }
         if (sgColour) {
           var displayValue = filterValue.charAt(0).toUpperCase() + filterValue.slice(1);
-          sourceGroupLine = '<div style="display:inline-block; font-size:12px; font-weight:600; color:' + sgColour + '; margin-bottom:2px; letter-spacing:0.03em;">' + displayValue + '</div>';
+          sourceGroupLine = '<div style="display:inline-block; font-size:12px; font-weight:600; line-height:1; color:' + sgColour + '; letter-spacing:0.03em;">' + displayValue + '</div>';
         }
       }
       // ──────────────────────────────────────────────────────────────────────
