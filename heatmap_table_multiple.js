@@ -42,7 +42,7 @@ looker.plugins.visualizations.add({
       order: 2,
       type: "boolean",
       label: "Deep colour = good (invert ramp on low-is-good columns)",
-      default: false,
+      default: true,
     },
     bar_color: {
       section: "Colours",
@@ -326,7 +326,7 @@ looker.plugins.visualizations.add({
     const WHITE = [255, 255, 255];
     const barColor = config.bar_color || "#713170";
     const useContrast = config.text_contrast !== false;
-    const invertLowGood = config.invert_low_good === true;
+    const invertLowGood = config.invert_low_good !== false;
     const showBadge = config.show_direction_badge !== false;
 
     // ── Build table ────────────────────────────────────────────────────────
