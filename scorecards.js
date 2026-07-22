@@ -5,12 +5,33 @@ looker.plugins.visualizations.add({
   },
   updateAsync: function(data, element, config, queryResponse, details, done) {
     try {
-      if (!data || data.length === 0) { done(); return; }
+      if (!data || data.length === 0) {
+        var emptyContainer = document.getElementById('kpi-container');
+        if (emptyContainer) {
+          emptyContainer.innerHTML =
+            '<div style="text-align:center; font-family: Google Sans, Roboto, sans-serif; color:#9AA0A6;">' +
+              '<div style="font-size:1.5em; font-weight:600;">No data</div>' +
+              '<div style="font-size:0.85em; margin-top:2px;">for this date range</div>' +
+            '</div>';
+        }
+        done();
+        return;
+      }
       var fields = queryResponse.fields;
       var allFields = (fields.measures || [])
         .concat(fields.dimensions || [])
         .concat(fields.table_calculations || []);
-      if (allFields.length === 0) { done(); return; }
+      if (allFields.length === 0) {
+        var noFieldsContainer = document.getElementById('kpi-container');
+        if (noFieldsContainer) {
+          noFieldsContainer.innerHTML =
+            '<div style="text-align:center; font-family: Google Sans, Roboto, sans-serif; color:#9AA0A6;">' +
+              '<div style="font-size:1.5em; font-weight:600;">No data</div>' +
+            '</div>';
+        }
+        done();
+        return;
+      }
 
       // ── number-format sniffing (used to render the derived pp delta) ──────
       function analyzeFormat(renderedStr) {
@@ -66,26 +87,44 @@ looker.plugins.visualizations.add({
       var periodField = null;
       var currentRow = null;
       var previousRow = null;
+      var periodFieldDetected = false; // true once we find a dimension carrying "current/previous period" values at all
 
       (fields.dimensions || []).concat(fields.table_calculations || []).some(function(f) {
-        var currentMatch = null, previousMatch = null;
+        var currentMatch = null, previousMatch = null, anyMatch = false;
         for (var i = 0; i < data.length; i++) {
           var cell = data[i][f.name];
           if (!cell) continue;
           var text = String(cell.rendered || cell.value || '').toLowerCase();
-          if (/current period/.test(text)) currentMatch = data[i];
-          else if (/previous period/.test(text)) previousMatch = data[i];
+          if (/current period/.test(text)) { currentMatch = data[i]; anyMatch = true; }
+          else if (/previous period/.test(text)) { previousMatch = data[i]; anyMatch = true; }
         }
-        if (currentMatch && previousMatch) {
+        if (anyMatch) {
           periodField = f;
           currentRow = currentMatch;
           previousRow = previousMatch;
+          periodFieldDetected = true;
           return true; // stop at first matching dimension
         }
         return false;
       });
 
+      // If this data clearly has a period-comparison dimension but no "current period" row came back,
+      // don't fall back to showing the previous period's figure as if it were current - show no-data instead.
+      if (periodFieldDetected && !currentRow) {
+        var noCurrentContainer = document.getElementById('kpi-container');
+        if (noCurrentContainer) {
+          noCurrentContainer.innerHTML =
+            '<div style="text-align:center; font-family: Google Sans, Roboto, sans-serif; color:#9AA0A6;">' +
+              '<div style="font-size:1.5em; font-weight:600;">No data</div>' +
+              '<div style="font-size:0.85em; margin-top:2px;">for current period</div>' +
+            '</div>';
+        }
+        done();
+        return;
+      }
+
       // row used for the main value / target lines / subtitle / link / source-group badge
+      // (only reaches here in legacy single-row mode if no period field was detected at all)
       var row = currentRow || data[0];
       // ────────────────────────────────────────────────────────────────────────
 
