@@ -259,7 +259,7 @@
         });
         path.addEventListener('mousemove', function (evt) {
           var pct = ((l.value / total) * 100).toFixed(0);
-          showTip('<strong>' + l.source + ' \u2192 ' + l.target + '</strong><br>' + fmt(l.value) + ' (' + pct + '%)', evt);
+          showTip('<strong>' + l.source + ' \u2192 ' + l.target + '</strong><br>' + pct + '%', evt);
         });
         path.addEventListener('mouseleave', hideTip);
         path.addEventListener('click', function (evt) {
@@ -288,7 +288,7 @@
 
           if (config.show_value_labels) {
             var sub = el('text', { class: 'node-sub', x: labelX, y: n.y + n.h / 2 + 10, 'text-anchor': anchor });
-            sub.textContent = fmt(n.total) + ' (' + pct + '%)';
+            sub.textContent = pct + '%';
             g.appendChild(sub);
           }
         });
