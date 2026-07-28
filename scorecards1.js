@@ -131,6 +131,11 @@ looker.plugins.visualizations.add({
       var mainValue = row[mainField.name].rendered || row[mainField.name].value;
       var isLowGood = targetActualField ? targetActualField.name.toLowerCase().includes('_low_') : false;
 
+      // ── detect "no data" rows (main measure is 0/null, likely a target-only row) ──
+      var mainNumericValue = row[mainField.name].value;
+      var isNoData = (mainNumericValue === 0 || mainNumericValue === null);
+      // ────────────────────────────────────────────────────────────────────────
+
       // ── source_group filter badge ──────────────────────────────────────────
       var sourceGroupLine = '';
       var appliedFilters = queryResponse.applied_filters || {};
@@ -152,9 +157,9 @@ looker.plugins.visualizations.add({
       }
       // ──────────────────────────────────────────────────────────────────────
 
-      // ── period-on-period line ───────────────────────────────────────────
+      // ── period-on-period line (suppressed entirely when isNoData) ───────────
       var ppLine = '';
-      if (periodField && previousRow) {
+      if (!isNoData && periodField && previousRow) {
         // NEW PATH: derive the delta from the two rows' main measure value
         var currentValue  = row[mainField.name].value;
         var previousValue = previousRow[mainField.name].value;
@@ -188,7 +193,7 @@ looker.plugins.visualizations.add({
         }
         ppLine = '<div style="font-size:0.85em; color:#696969; margin-top:2px; cursor:' + (ppTooltipAttr ? 'help' : 'default') + ';"' + ppTooltipAttr + '>' + ppArrow + ' ' + ppActualLabel + '</div>';
 
-      } else if (ppActualField) {
+      } else if (!isNoData && ppActualField) {
         // LEGACY PATH: explicit pp_actual / pp_perc measure fields on a single row
         var ppActualValueLegacy    = row[ppActualField.name].value;
         var ppActualRenderedLegacy = row[ppActualField.name].rendered != null
@@ -223,23 +228,29 @@ looker.plugins.visualizations.add({
         var targetActualRendered = row[targetActualField.name].rendered != null
           ? (targetActualValue >= 0 ? '+' : '') + row[targetActualField.name].rendered
           : (targetActualValue >= 0 ? '+' : '') + row[targetActualField.name].value;
-        var emojiValue = targetPercField ? row[targetPercField.name].value : (targetActualValue >= 0 ? 1 : -1);
-        var targetEmoji;
-        if (isLowGood) {
-          targetEmoji = emojiValue < 0 ? '🟢' : emojiValue <= 0.05 ? '🟡' : '🔴';
-        } else {
-          targetEmoji = emojiValue >= 0 ? '🟢' : emojiValue >= -0.05 ? '🟡' : '🔴';
-        }
         var isPercMetricTarget = targetActualField.name.toLowerCase().includes('_perc');
         var vsTargetLabel = isPercMetricTarget
           ? targetActualRendered + '%p vs target'
           : targetActualRendered + ' vs target';
-        var tooltipAttr = '';
-        if (targetPercField) {
-          var targetPercRendered = row[targetPercField.name].rendered || row[targetPercField.name].value;
-          tooltipAttr = ' title="' + targetPercRendered + ' difference vs target"';
+
+        if (isNoData) {
+          // no colour coding, no emoji - just the plain figure
+          targetLine = '<div style="font-size:0.85em; color:#696969; margin-top:4px;">' + vsTargetLabel + '</div>';
+        } else {
+          var emojiValue = targetPercField ? row[targetPercField.name].value : (targetActualValue >= 0 ? 1 : -1);
+          var targetEmoji;
+          if (isLowGood) {
+            targetEmoji = emojiValue < 0 ? '🟢' : emojiValue <= 0.05 ? '🟡' : '🔴';
+          } else {
+            targetEmoji = emojiValue >= 0 ? '🟢' : emojiValue >= -0.05 ? '🟡' : '🔴';
+          }
+          var tooltipAttr = '';
+          if (targetPercField) {
+            var targetPercRendered = row[targetPercField.name].rendered || row[targetPercField.name].value;
+            tooltipAttr = ' title="' + targetPercRendered + ' difference vs target"';
+          }
+          targetLine = '<div style="font-size:0.85em; color:#696969; margin-top:4px; cursor:' + (targetPercField ? 'help' : 'default') + ';"' + tooltipAttr + '>' + targetEmoji + ' ' + vsTargetLabel + '</div>';
         }
-        targetLine = '<div style="font-size:0.85em; color:#696969; margin-top:4px; cursor:' + (targetPercField ? 'help' : 'default') + ';"' + tooltipAttr + '>' + targetEmoji + ' ' + vsTargetLabel + '</div>';
       }
 
       var subtitleLine = '';
@@ -257,11 +268,16 @@ looker.plugins.visualizations.add({
         }
       }
 
+      // ── main value display (swapped for "No data for this period" when isNoData) ──
+      var mainDisplay = isNoData
+        ? '<div style="font-size:1.3em; font-weight:600; color:#9AA0A6;">No data for this period</div>'
+        : '<div style="font-size:2.5em; font-weight:600; color:#282828;">' + mainValue + '</div>';
+
       var container = document.getElementById('kpi-container');
       container.innerHTML =
         '<div style="text-align:center; font-family: Google Sans, Roboto, sans-serif;">' +
         sourceGroupLine +
-          '<div style="font-size:2.5em; font-weight:600; color:#282828;">' + mainValue + '</div>' +
+          mainDisplay +
           subtitleLine +
           targetLine +
           ppLine +
