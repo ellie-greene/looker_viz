@@ -7,6 +7,12 @@ const lineChartViz = {
       label: "Lower is better (e.g. CPA)",
       default: false,
       section: "Style"
+    },
+    y_zero_base: {
+      type: "boolean",
+      label: "Y axis starts at zero",
+      default: true,
+      section: "Style"
     }
   },
 
@@ -69,6 +75,7 @@ const lineChartViz = {
     const breakdownField = dims.length > 1 ? dims[1] : null;
 
     const isLowGood = config.is_low_good || false;
+    const zeroBase  = config.y_zero_base !== false;
 
     // ── Colour palette (Looker-ish, enough for ~11 values) ──
     const PALETTE = [
@@ -158,12 +165,32 @@ const lineChartViz = {
     chartWrap.appendChild(tooltip);
 
     // ── Helpers ──
-    function fmtValue(v, field) {
-      if (v === null || v === undefined) return "—";
+    function isPercentField(field) {
+      const fmt = ((field.value_format || "") + (field.value_format_name || "")).toLowerCase();
+      return fmt.indexOf("%") > -1 || fmt.indexOf("percent") > -1;
+    }
+
+    function isCurrencyField(field) {
       const fname = ((field.name || "") + (field.value_format || "")).toLowerCase();
       const label = (field.label_short || field.label || "").toLowerCase();
-      const isCurrency = fname.includes("gbp") || fname.includes("cost") || fname.includes("commission") || fname.includes("expense") || fname.includes("cpa") || label.includes("cost") || label.includes("cpa");
-      if (isCurrency) {
+      return fname.includes("gbp") || fname.includes("cost") || fname.includes("commission") ||
+             fname.includes("expense") || fname.includes("cpa") ||
+             label.includes("cost") || label.includes("cpa");
+    }
+
+    // How many decimals are needed to render a tick step without duplicate labels
+    function decimalsFor(step) {
+      if (!isFinite(step) || step <= 0) return 0;
+      return Math.max(0, Math.min(6, Math.ceil(-Math.log10(step))));
+    }
+
+    function fmtValue(v, field) {
+      if (v === null || v === undefined) return "—";
+      if (isPercentField(field)) {
+        const pct = v * 100;
+        return (Math.abs(pct) < 10 ? pct.toFixed(2) : pct.toFixed(1)) + "%";
+      }
+      if (isCurrencyField(field)) {
         if (Math.abs(v) < 100) return "£" + v.toFixed(2);
         return "£" + Math.round(v).toLocaleString("en-GB");
       }
@@ -171,17 +198,19 @@ const lineChartViz = {
       return Math.round(v).toLocaleString("en-GB");
     }
 
-    function fmtTick(v, field) {
-      const fname = ((field.name || "") + (field.value_format || "")).toLowerCase();
-      const label = (field.label_short || field.label || "").toLowerCase();
-      const isCurrency = fname.includes("gbp") || fname.includes("cost") || fname.includes("commission") || fname.includes("expense") || fname.includes("cpa") || label.includes("cost") || label.includes("cpa");
-      const prefix = isCurrency ? "£" : "";
-      const abs = Math.abs(v);
+    function fmtTick(v, field, interval) {
       const sign = v < 0 ? "-" : "";
+      const abs  = Math.abs(v);
+
+      if (isPercentField(field)) {
+        const d = decimalsFor((interval || 0.01) * 100);
+        return sign + (abs * 100).toFixed(d) + "%";
+      }
+
+      const prefix = isCurrencyField(field) ? "£" : "";
       if (abs >= 1000000) return sign + prefix + (abs / 1000000).toFixed(1).replace(/\.0$/, "") + "m";
       if (abs >= 1000)    return sign + prefix + (abs / 1000).toFixed(1).replace(/\.0$/, "") + "k";
-      if (abs < 10 && abs !== 0) return sign + prefix + abs.toFixed(1);
-      return sign + prefix + Math.round(abs).toLocaleString("en-GB");
+      return sign + prefix + abs.toFixed(decimalsFor(interval || 1));
     }
 
     function niceNum(range, round) {
@@ -202,16 +231,27 @@ const lineChartViz = {
       return nice * Math.pow(10, exp);
     }
 
-    function niceTicks(minV, maxV) {
-      const range    = niceNum(Math.max(maxV - minV, 1), false);
-      const interval = niceNum(range / 5, true);
-      const nMin     = Math.floor(minV / interval) * interval;
-      const nMax     = Math.ceil(maxV  / interval) * interval;
-      const ticks    = [];
-      for (let v = nMin; v <= nMax + interval * 0.5; v += interval) {
-        ticks.push(Math.round(v * 1e10) / 1e10);
+    function niceTicks(minV, maxV, forceZero) {
+      let lo = minV, hi = maxV;
+
+      if (forceZero) { lo = Math.min(0, lo); hi = Math.max(0, hi); }
+
+      // Flat series (all values identical) — build a band around the value
+      if (hi === lo) {
+        const pad = Math.abs(hi) * 0.1 || 1;
+        lo -= pad; hi += pad;
       }
-      return { ticks, nMin, nMax };
+
+      const span     = niceNum(hi - lo, false);
+      const interval = niceNum(span / 5, true);
+      const nMin     = Math.floor(lo / interval) * interval;
+      const nMax     = Math.ceil(hi  / interval) * interval;
+
+      const ticks = [];
+      for (let i = 0; nMin + i * interval <= nMax + interval * 0.5; i++) {
+        ticks.push(Math.round((nMin + i * interval) * 1e10) / 1e10);
+      }
+      return { ticks, nMin, nMax, interval };
     }
 
     // ── Build points per series ──
@@ -295,7 +335,8 @@ const lineChartViz = {
         pts.forEach(p => { if (p.y !== null) allY.push(p.y); });
       });
       if (!allY.length) allY = [0, 1];
-      const { ticks: ticksA, nMin: nMinA, nMax: nMaxA } = niceTicks(Math.min(...allY), Math.max(...allY));
+      const { ticks: ticksA, nMin: nMinA, nMax: nMaxA, interval: intervalA } =
+        niceTicks(Math.min(...allY), Math.max(...allY), zeroBase);
 
       // SVG dimensions
       const W       = chartWrap.clientWidth  || 600;
@@ -328,7 +369,7 @@ const lineChartViz = {
         t.setAttribute("x", marginL - 6); t.setAttribute("y", y + 4);
         t.setAttribute("text-anchor", "end");
         t.classList.add("lc-axis-label");
-        t.textContent = fmtTick(v, measure);
+        t.textContent = fmtTick(v, measure, intervalA);
         svg.appendChild(t);
       });
 
