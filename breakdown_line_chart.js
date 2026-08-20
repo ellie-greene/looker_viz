@@ -13,6 +13,12 @@ const lineChartViz = {
       label: "Y axis starts at zero",
       default: true,
       section: "Style"
+    },
+    legend_collapse_at: {
+      type: "number",
+      label: "Collapse legend above N series",
+      default: 8,
+      section: "Style"
     }
   },
 
@@ -24,10 +30,16 @@ const lineChartViz = {
       .lc-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
       .lc-controls label { font-size: 12px; color: #6b6b6b; }
       .lc-controls select { font-size: 12px; padding: 3px 7px; border-radius: 6px; border: 1px solid #ddd; background: #fff; color: #333; cursor: pointer; }
-      .lc-legend { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-left: 4px; }
+      .lc-legend { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-left: 4px; max-height: 92px; overflow-y: auto; padding: 2px 0; }
+      .lc-legend.lc-collapsed { display: none; }
       .lc-legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #555; cursor: pointer; user-select: none; }
       .lc-legend-item.hidden { opacity: 0.35; text-decoration: line-through; }
       .lc-legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+      .lc-legend-toggle { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #555; background: #f7f7f7; border: 1px solid #e4e4e4; border-radius: 6px; padding: 3px 8px; cursor: pointer; user-select: none; white-space: nowrap; }
+      .lc-legend-toggle:hover { background: #f0f0f0; }
+      .lc-legend-caret { font-size: 9px; color: #999; }
+      .lc-legend-count { color: #999; }
+      .lc-legend-reset { font-size: 11px; color: #713170; cursor: pointer; user-select: none; text-decoration: underline; }
       .lc-chart-wrap { flex: 1; position: relative; min-height: 200px; }
       .lc-svg { width: 100%; height: 100%; }
       .lc-axis-label { font-size: 11px; fill: #888; }
@@ -146,14 +158,58 @@ const lineChartViz = {
 
     wrap.appendChild(controls);
 
-    // ── Legend row (series toggles) ──
+    // ── Legend (collapsible) ──
+    // Auto-collapse when there are more series than the threshold; the user's
+    // manual choice (stored on wrap.dataset) always wins once they've clicked.
+    const collapseThreshold = Math.max(1, config.legend_collapse_at || 8);
+    let legendOpen;
+    if (wrap.dataset.legendOpen === "1")      legendOpen = true;
+    else if (wrap.dataset.legendOpen === "0") legendOpen = false;
+    else                                      legendOpen = seriesValues.length <= collapseThreshold;
+
     const legendRow = document.createElement("div");
     legendRow.className = "lc-controls-row";
 
+    const legendToggle = document.createElement("div");
+    legendToggle.className = "lc-legend-toggle";
+    legendRow.appendChild(legendToggle);
+
+    const legendReset = document.createElement("span");
+    legendReset.className = "lc-legend-reset";
+    legendReset.textContent = "show all";
+    legendReset.style.display = "none";
+    legendRow.appendChild(legendReset);
+
     const legend = document.createElement("div");
     legend.className = "lc-legend";
-    legendRow.appendChild(legend);
     wrap.appendChild(legendRow);
+    wrap.appendChild(legend);
+
+    function paintLegendToggle() {
+      const hiddenCount = hiddenSeries.size;
+      const caret = legendOpen ? "▾" : "▸";
+      const countTxt = hiddenCount
+        ? `${seriesValues.length} series · ${hiddenCount} hidden`
+        : `${seriesValues.length} series`;
+      legendToggle.innerHTML =
+        `<span class="lc-legend-caret">${caret}</span>Legend <span class="lc-legend-count">(${countTxt})</span>`;
+      legend.classList.toggle("lc-collapsed", !legendOpen);
+      legendReset.style.display = hiddenCount ? "inline" : "none";
+    }
+
+    legendToggle.addEventListener("click", () => {
+      legendOpen = !legendOpen;
+      wrap.dataset.legendOpen = legendOpen ? "1" : "0";
+      paintLegendToggle();
+      // Chart area has resized — redraw so the SVG fills it
+      renderChart(parseInt(sel.value) || 0, parseInt(sel2.value));
+    });
+
+    legendReset.addEventListener("click", () => {
+      hiddenSeries.clear();
+      wrap.dataset.hidden = "[]";
+      renderChart(parseInt(sel.value) || 0, parseInt(sel2.value));
+    });
 
     // ── Chart area ──
     const chartWrap = document.createElement("div");
@@ -315,7 +371,6 @@ const lineChartViz = {
     function renderChart(mIdx, m2Idx) {
       const oldSvg = chartWrap.querySelector("svg");
       if (oldSvg) oldSvg.remove();
-      legend.innerHTML = "";
 
       const measure  = measures[mIdx];
       const measure2 = m2Idx >= 0 ? measures[m2Idx] : null;
@@ -327,6 +382,10 @@ const lineChartViz = {
         chartWrap.innerHTML = '<div class="lc-debug">No data points to render.</div>';
         return;
       }
+
+      // Build the legend BEFORE measuring the chart area, so the SVG is sized
+      // against the layout it will actually sit in
+      buildLegend();
 
       // Y range across all visible series
       let allY = [];
@@ -473,7 +532,11 @@ const lineChartViz = {
 
       chartWrap.appendChild(svg);
 
-      // ── Legend with click-to-hide ──
+    }
+
+    // ── Legend with click-to-hide ──
+    function buildLegend() {
+      legend.innerHTML = "";
       seriesValues.forEach(sVal => {
         const color = seriesColour[sVal];
         const item  = document.createElement("div");
@@ -491,6 +554,8 @@ const lineChartViz = {
         });
         legend.appendChild(item);
       });
+
+      paintLegendToggle();
     }
 
     renderChart(parseInt(sel.value) || 0, parseInt(sel2.value));
