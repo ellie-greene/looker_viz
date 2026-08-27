@@ -147,7 +147,7 @@ looker.plugins.visualizations.add({
         var sgColour = null;
         if (/digital/i.test(filterValue)) {
           sgColour = '#1A73E8';
-        } else if (/face.*(2|to).*face|f2f/i.test(filterValue)) {
+        } else if (/direct.*sales/i.test(filterValue)) {
           sgColour = '#D93025';
         }
         if (sgColour) {
