@@ -16,18 +16,30 @@
  *    means "good" rather than "high"
  *  - Optional data-bar column (like the Complaints bar in the standard table)
  *  - Pivot support: each measure × pivot combination scales independently
+ *  - Row-total column: when the Explore's "Row Total" is on, the pivot total
+ *    is shown as a plain bold "Total" column (unscaled — never heat-coloured
+ *    or turned into a bar, matching Looker's own table)
+ *  - Grand-totals footer row, computed client-side across the rows the
+ *    visualisation actually received (see caveat below)
  *  - Drill menu support on cell click
+ *
+ * A note on totals: Looker's Visualization API does not hand custom
+ * visualisations a separately-computed grand-total row — queryResponse only
+ * exposes `has_totals` / `has_row_totals` flags, and the per-row pivot total
+ * arrives as a normal pivot with `is_total: true` (key "$$$_row_total_$$$").
+ * So the row-total *column* below is real Looker data, but the totals
+ * *footer row* is this visualisation summing the rows it was given — if the
+ * query is row-limited, that sum can differ from Looker's own "Total" value
+ * for a measure (which is computed server-side over the full result set).
  *
  * Host at ellie-greene/looker_viz, serve via jsDelivr:
  *   https://cdn.jsdelivr.net/gh/ellie-greene/looker_viz@main/scaled_heatmap_table.js
  * Purge after updates:
  *   https://purge.jsdelivr.net/gh/ellie-greene/looker_viz@main/scaled_heatmap_table.js
  */
-
 looker.plugins.visualizations.add({
   id: "scaled_heatmap_table",
   label: "Scaled Heatmap Table",
-
   // Static options — per-measure colour & direction options are added dynamically
   options: {
     text_contrast: {
@@ -59,8 +71,14 @@ looker.plugins.visualizations.add({
       label: "Show good-direction indicator in headers",
       default: true,
     },
+    show_totals_row: {
+      section: "Formatting",
+      order: 3,
+      type: "boolean",
+      label: "Show totals row (sums the rows this visualisation received)",
+      default: true,
+    },
   },
-
   // Pure brand palette, ordered for legibility on a white ramp
   _PALETTE: [
     "#713170", // purple
@@ -74,14 +92,23 @@ looker.plugins.visualizations.add({
     "#BE0021", // red
     "#FFB4A8", // pink
   ],
-
+  // Measure types where re-summing the visible rows is a meaningful "total".
+  // Averages/medians/mins/maxes are intentionally excluded — summing or
+  // re-averaging displayed values would produce a misleading number, so
+  // those columns show "—" in the totals row instead of guessing.
+  _SUMMABLE_TYPES: [
+    "sum",
+    "sum_distinct",
+    "count",
+    "count_distinct",
+    "number",
+    "int",
+  ],
   // ────────────────────────────────────────────────────────────────────────
-
   create: function (element) {
     element.innerHTML = "";
     this._container = element.appendChild(document.createElement("div"));
     this._container.className = "sht-container";
-
     const style = document.createElement("style");
     style.innerHTML = `
       .sht-container {
@@ -110,6 +137,7 @@ looker.plugins.visualizations.add({
         vertical-align: bottom;
       }
       .sht-table th.sht-num { text-align: right; }
+      .sht-table th.sht-total { background: #f4f2f5; }
       .sht-dir {
         display: block;
         font-weight: 400;
@@ -126,6 +154,10 @@ looker.plugins.visualizations.add({
       .sht-table td.sht-num { text-align: right; }
       .sht-table tr:nth-child(even) td.sht-plain { background: #f8f8f8; }
       .sht-table tr:hover td.sht-plain { background: #f1f3f4; }
+      .sht-table td.sht-total {
+        background: #f4f2f5;
+        font-weight: 700;
+      }
       .sht-null { color: #9aa0a6; }
       .sht-drillable { cursor: pointer; }
       .sht-barcell {
@@ -145,6 +177,15 @@ looker.plugins.visualizations.add({
         z-index: 1;
         padding-left: 4px;
       }
+      .sht-table tfoot td {
+        position: sticky;
+        bottom: 0;
+        z-index: 1;
+        background: #eef0f1;
+        font-weight: 700;
+        border-top: 2px solid #d0d4d6;
+        border-bottom: none;
+      }
       .sht-error {
         padding: 16px;
         color: #9aa0a6;
@@ -152,13 +193,10 @@ looker.plugins.visualizations.add({
       }
     `;
     this._container.appendChild(style);
-
     this._content = this._container.appendChild(document.createElement("div"));
     this._registeredOptionsKey = null;
   },
-
   // ─── Helpers ─────────────────────────────────────────────────────────────
-
   _hexToRgb: function (hex) {
     if (!hex) return null;
     const h = hex.replace("#", "").trim();
@@ -169,7 +207,6 @@ looker.plugins.visualizations.add({
       parseInt(h.slice(4, 6), 16),
     ];
   },
-
   _lerp: function (a, b, t) {
     return [
       Math.round(a[0] + (b[0] - a[0]) * t),
@@ -177,7 +214,6 @@ looker.plugins.visualizations.add({
       Math.round(a[2] + (b[2] - a[2]) * t),
     ];
   },
-
   _luminance: function (rgb) {
     const chan = rgb.map(function (c) {
       c = c / 255;
@@ -185,7 +221,6 @@ looker.plugins.visualizations.add({
     });
     return 0.2126 * chan[0] + 0.7152 * chan[1] + 0.0722 * chan[2];
   },
-
   _escape: function (s) {
     return String(s)
       .replace(/&/g, "&amp;")
@@ -193,28 +228,28 @@ looker.plugins.visualizations.add({
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
   },
-
+  _formatNumber: function (n) {
+    if (!isFinite(n)) return String(n);
+    const rounded = Math.round(n * 100) / 100;
+    return rounded.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  },
   // ─── Main render ─────────────────────────────────────────────────────────
-
   updateAsync: function (data, element, config, queryResponse, details, done) {
     const self = this;
     const dims = queryResponse.fields.dimension_like || [];
     const measures = queryResponse.fields.measure_like || [];
     const pivots = queryResponse.pivots || null;
     const hasPivot = pivots && pivots.length > 0;
-
     if (measures.length === 0) {
       this._content.innerHTML =
         '<div class="sht-error">Add at least one measure to use this visualisation.</div>';
       done();
       return;
     }
-
     // ── Dynamically register per-measure options (viz-level config only —
     //    no LookML changes required) ─────────────────────────────────────────
     const dynamicOptions = {};
     for (const key in this.options) dynamicOptions[key] = this.options[key];
-
     measures.forEach(function (m, i) {
       const label = m.label_short || m.label;
       dynamicOptions["direction_" + m.name] = {
@@ -239,7 +274,6 @@ looker.plugins.visualizations.add({
         default: self._PALETTE[i % self._PALETTE.length],
       };
     });
-
     const barValues = [{ "None": "__none__" }];
     measures.forEach(function (m) {
       const entry = {};
@@ -255,20 +289,31 @@ looker.plugins.visualizations.add({
       values: barValues,
       default: "__none__",
     };
-
     // Only re-register when the field set changes, to avoid render loops
     const optionsKey = measures.map(function (m) { return m.name; }).join("|");
     if (optionsKey !== this._registeredOptionsKey) {
       this._registeredOptionsKey = optionsKey;
       this.trigger("registerOptions", dynamicOptions);
     }
-
     // ── Build flat column list (measure × pivot when pivoted) ─────────────
+    // Looker adds a synthetic pivot for the Explore's "Row Total" setting —
+    // it carries is_total:true and key "$$$_row_total_$$$". We render it as
+    // its own "Total" column instead of dropping it.
     const columns = [];
     measures.forEach(function (m, mIdx) {
       if (hasPivot) {
         pivots.forEach(function (p) {
-          if (p.key === "$$$_row_total_$$$") return;
+          const isTotalPivot = p.is_total || p.key === "$$$_row_total_$$$";
+          if (isTotalPivot) {
+            columns.push({
+              measure: m,
+              measureIndex: mIdx,
+              pivotKey: p.key,
+              label: measures.length > 1 ? "Total — " + (m.label_short || m.label) : "Total",
+              isTotal: true,
+            });
+            return;
+          }
           const pivotLabel = p.metadata
             ? Object.keys(p.metadata)
                 .map(function (k) { return p.metadata[k].rendered || p.metadata[k].value; })
@@ -282,6 +327,7 @@ looker.plugins.visualizations.add({
               measures.length > 1
                 ? pivotLabel + " — " + (m.label_short || m.label)
                 : pivotLabel,
+            isTotal: false,
           });
         });
       } else {
@@ -290,45 +336,47 @@ looker.plugins.visualizations.add({
           measureIndex: mIdx,
           pivotKey: null,
           label: m.label_short || m.label,
+          isTotal: false,
         });
       }
     });
-
     // ── Cell accessor ──────────────────────────────────────────────────────
     function getCell(row, col) {
       const holder = row[col.measure.name];
       if (holder == null) return null;
       return col.pivotKey != null ? holder[col.pivotKey] : holder;
     }
-
     // ── Per-column min/max (independent scales) + colour + direction ──────
+    // Total columns are never heat-scaled or bar-ified — like Looker's own
+    // table, the Total column stays a plain bold number.
     columns.forEach(function (col) {
       let min = Infinity;
       let max = -Infinity;
-      data.forEach(function (row) {
-        const cell = getCell(row, col);
-        const v = cell ? cell.value : null;
-        if (typeof v === "number" && isFinite(v)) {
-          if (v < min) min = v;
-          if (v > max) max = v;
-        }
-      });
+      if (!col.isTotal) {
+        data.forEach(function (row) {
+          const cell = getCell(row, col);
+          const v = cell ? cell.value : null;
+          if (typeof v === "number" && isFinite(v)) {
+            if (v < min) min = v;
+            if (v > max) max = v;
+          }
+        });
+      }
       col.min = min;
       col.max = max;
       col.hasRange = isFinite(min) && isFinite(max);
       col.direction = config["direction_" + col.measure.name] || "high";
-      col.isBar = config["bar_measure"] === col.measure.name;
+      col.isBar = !col.isTotal && config["bar_measure"] === col.measure.name;
       col.rgb =
         self._hexToRgb(config["color_" + col.measure.name]) ||
         self._hexToRgb(self._PALETTE[col.measureIndex % self._PALETTE.length]);
     });
-
     const WHITE = [255, 255, 255];
     const barColor = config.bar_color || "#713170";
     const useContrast = config.text_contrast !== false;
     const invertLowGood = config.invert_low_good !== false;
     const showBadge = config.show_direction_badge !== false;
-
+    const showTotalsRow = config.show_totals_row !== false;
     // ── Build table ────────────────────────────────────────────────────────
     let html = '<table class="sht-table"><thead><tr>';
     dims.forEach(function (d) {
@@ -336,20 +384,19 @@ looker.plugins.visualizations.add({
     });
     columns.forEach(function (col) {
       let badge = "";
-      if (showBadge && !col.isBar && col.direction !== "none") {
+      if (showBadge && !col.isBar && !col.isTotal && col.direction !== "none") {
         badge =
           '<span class="sht-dir">' +
           (col.direction === "low" ? "&#9660; good" : "&#9650; good") +
           "</span>";
       }
       html +=
-        '<th class="sht-num">' + self._escape(col.label) + badge + "</th>";
+        '<th class="sht-num' + (col.isTotal ? " sht-total" : "") + '">' +
+        self._escape(col.label) + badge + "</th>";
     });
     html += "</tr></thead><tbody>";
-
     data.forEach(function (row, rIdx) {
       html += "<tr>";
-
       dims.forEach(function (d) {
         const cell = row[d.name];
         const text =
@@ -368,7 +415,6 @@ looker.plugins.visualizations.add({
             : self._escape(text)) +
           "</td>";
       });
-
       columns.forEach(function (col, cIdx) {
         const cell = getCell(row, col);
         const v = cell ? cell.value : null;
@@ -378,7 +424,18 @@ looker.plugins.visualizations.add({
             : v;
         const drillable = cell && cell.links && cell.links.length > 0;
         const attrs = ' data-r="' + rIdx + '" data-c="' + cIdx + '"';
-
+        // Total column — plain bold number, never a bar or heat colour
+        if (col.isTotal) {
+          html +=
+            '<td class="sht-num sht-total' +
+            (drillable ? " sht-drillable" : "") +
+            '"' + attrs + ">" +
+            (text == null
+              ? '<span class="sht-null">&empty;</span>'
+              : self._escape(text)) +
+            "</td>";
+          return;
+        }
         // Data-bar column — bar instead of heat colouring
         if (col.isBar) {
           let barHtml = "";
@@ -408,7 +465,6 @@ looker.plugins.visualizations.add({
             "</span></td>";
           return;
         }
-
         // Heat-scaled column: white (low) → column colour (high).
         // If "deep colour = good" is on, low-is-good columns invert so the
         // ramp tracks performance instead of magnitude.
@@ -437,7 +493,6 @@ looker.plugins.visualizations.add({
             ';"';
           cellClass = "sht-num"; // no zebra/hover override on coloured cells
         }
-
         html +=
           "<td class=\"" + cellClass +
           (drillable ? " sht-drillable" : "") +
@@ -447,27 +502,52 @@ looker.plugins.visualizations.add({
             : self._escape(text)) +
           "</td>";
       });
-
       html += "</tr>";
     });
-
-    html += "</tbody></table>";
+    html += "</tbody>";
+    // ── Grand-totals footer row ────────────────────────────────────────────
+    // Summed client-side over the rows this visualisation received. See the
+    // header comment: if the query is row-limited, this can differ from
+    // Looker's own server-side "Total" for a measure.
+    if (showTotalsRow && data.length > 0) {
+      html += "<tfoot><tr>";
+      dims.forEach(function (d, i) {
+        html += '<td>' + (i === 0 ? "Total" : "") + "</td>";
+      });
+      columns.forEach(function (col) {
+        const summable = self._SUMMABLE_TYPES.indexOf(col.measure.type) !== -1;
+        let cellText = "—"; // em dash for non-summable measure types
+        if (summable) {
+          let sum = 0;
+          let sawValue = false;
+          data.forEach(function (row) {
+            const cell = getCell(row, col);
+            const v = cell ? cell.value : null;
+            if (typeof v === "number" && isFinite(v)) {
+              sum += v;
+              sawValue = true;
+            }
+          });
+          if (sawValue) cellText = self._formatNumber(sum);
+        }
+        html += '<td class="sht-num">' + self._escape(cellText) + "</td>";
+      });
+      html += "</tr></tfoot>";
+    }
+    html += "</table>";
     this._content.innerHTML = html;
-
     // ── Drill support ──────────────────────────────────────────────────────
     this._content.querySelectorAll("td.sht-drillable").forEach(function (td) {
       td.addEventListener("click", function (event) {
         const rIdx = parseInt(td.getAttribute("data-r"), 10);
         const row = data[rIdx];
         let cell = null;
-
         if (td.hasAttribute("data-f")) {
           cell = row[td.getAttribute("data-f")];
         } else if (td.hasAttribute("data-c")) {
           const col = columns[parseInt(td.getAttribute("data-c"), 10)];
           cell = getCell(row, col);
         }
-
         if (cell && cell.links && cell.links.length > 0) {
           LookerCharts.Utils.openDrillMenu({
             links: cell.links,
@@ -476,7 +556,6 @@ looker.plugins.visualizations.add({
         }
       });
     });
-
     done();
   },
 });
