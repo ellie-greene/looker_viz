@@ -31,6 +31,12 @@
  * *footer row* is this visualisation summing the rows it was given — if the
  * query is row-limited, that sum can differ from Looker's own "Total" value
  * for a measure (which is computed server-side over the full result set).
+ * Only genuinely additive measure types (sum/count/count_distinct/
+ * sum_distinct) are summed by default — ratios, percentages, averages and
+ * anything typed "number" show "—" instead of a meaningless summed or
+ * re-averaged percentage. Override per measure via the "— totals row"
+ * option (Auto / Sum / None) if you know a "number"-type measure really is
+ * additive.
  *
  * Host at ellie-greene/looker_viz, serve via jsDelivr:
  *   https://cdn.jsdelivr.net/gh/ellie-greene/looker_viz@main/scaled_heatmap_table.js
@@ -78,6 +84,13 @@ looker.plugins.visualizations.add({
       label: "Show totals row (sums the rows this visualisation received)",
       default: true,
     },
+    debug_log_query_response: {
+      section: "Formatting",
+      order: 4,
+      type: "boolean",
+      label: "[Debug] Log queryResponse to console (remove once checked)",
+      default: false,
+    },
   },
   // Pure brand palette, ordered for legibility on a white ramp
   _PALETTE: [
@@ -93,17 +106,15 @@ looker.plugins.visualizations.add({
     "#FFB4A8", // pink
   ],
   // Measure types where re-summing the visible rows is a meaningful "total".
-  // Averages/medians/mins/maxes are intentionally excluded — summing or
-  // re-averaging displayed values would produce a misleading number, so
-  // those columns show "—" in the totals row instead of guessing.
-  _SUMMABLE_TYPES: [
-    "sum",
-    "sum_distinct",
-    "count",
-    "count_distinct",
-    "number",
-    "int",
-  ],
+  // Everything else — averages, medians, min/max, and critically "number"
+  // (LookML's generic type, almost always used for ratios/percentages/other
+  // derived-not-additive values, e.g. a "% Active" measure) — is excluded on
+  // purpose: summing row-level percentages produces nonsense like "3.31"
+  // instead of a real percentage. Looker's own advanced_table example
+  // visualisation treats "number" the same way, grouping it with averages
+  // rather than sums. Use the per-measure "— totals row" option below to
+  // override this on a measure you know really is additive.
+  _SUMMABLE_TYPES: ["sum", "sum_distinct", "count", "count_distinct"],
   // ────────────────────────────────────────────────────────────────────────
   create: function (element) {
     element.innerHTML = "";
@@ -246,6 +257,18 @@ looker.plugins.visualizations.add({
       done();
       return;
     }
+    // ── TEMPORARY DEBUG — turn on "[Debug] Log queryResponse to console" in
+    //    the viz editor, run with Row Total / measure Total enabled, then
+    //    check the browser console. Look at the "top-level keys" line first —
+    //    anything there beyond data/fields/pivots/has_totals/has_row_totals
+    //    is worth inspecting closely. Delete this whole block once checked.
+    if (config.debug_log_query_response) {
+      console.log("[scaled_heatmap_table] top-level queryResponse keys:", Object.keys(queryResponse));
+      console.log("[scaled_heatmap_table] has_totals:", queryResponse.has_totals, "has_row_totals:", queryResponse.has_row_totals);
+      console.log("[scaled_heatmap_table] full queryResponse:", queryResponse);
+      console.log("[scaled_heatmap_table] first data row:", data && data[0]);
+      console.log("[scaled_heatmap_table] last data row:", data && data[data.length - 1]);
+    }
     // ── Dynamically register per-measure options (viz-level config only —
     //    no LookML changes required) ─────────────────────────────────────────
     const dynamicOptions = {};
@@ -254,7 +277,7 @@ looker.plugins.visualizations.add({
       const label = m.label_short || m.label;
       dynamicOptions["direction_" + m.name] = {
         section: "Column scales",
-        order: i * 2 + 1,
+        order: i * 3 + 1,
         type: "string",
         display: "select",
         label: label + " — direction",
@@ -267,11 +290,24 @@ looker.plugins.visualizations.add({
       };
       dynamicOptions["color_" + m.name] = {
         section: "Column scales",
-        order: i * 2 + 2,
+        order: i * 3 + 2,
         type: "string",
         display: "color",
         label: label + " — colour",
         default: self._PALETTE[i % self._PALETTE.length],
+      };
+      dynamicOptions["totals_" + m.name] = {
+        section: "Column scales",
+        order: i * 3 + 3,
+        type: "string",
+        display: "select",
+        label: label + " — totals row",
+        values: [
+          { "Auto (sum only if additive)": "auto" },
+          { "Sum": "sum" },
+          { "None (—)": "none" },
+        ],
+        default: "auto",
       };
     });
     const barValues = [{ "None": "__none__" }];
@@ -515,7 +551,11 @@ looker.plugins.visualizations.add({
         html += '<td>' + (i === 0 ? "Total" : "") + "</td>";
       });
       columns.forEach(function (col) {
-        const summable = self._SUMMABLE_TYPES.indexOf(col.measure.type) !== -1;
+        const totalsMode = config["totals_" + col.measure.name] || "auto";
+        const summable =
+          totalsMode === "sum" ||
+          (totalsMode === "auto" &&
+            self._SUMMABLE_TYPES.indexOf(col.measure.type) !== -1);
         let cellText = "—"; // em dash for non-summable measure types
         if (summable) {
           let sum = 0;
