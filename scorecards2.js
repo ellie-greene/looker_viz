@@ -1,3 +1,4 @@
+
 looker.plugins.visualizations.add({
   options: {},
   create: function(element, config) {
@@ -37,13 +38,18 @@ looker.plugins.visualizations.add({
       function analyzeFormat(renderedStr) {
         renderedStr = String(renderedStr == null ? '' : renderedStr);
         var m = renderedStr.match(/^(\D*)([\d,]+(?:\.\d+)?)(\D*)$/);
-        if (!m) return { prefix: '', suffix: '', decimals: 0 };
+        if (!m) return { prefix: '', suffix: '', decimals: 0, numeric: null };
         var prefix = m[1] || '';
         var numPart = m[2] || '';
         var suffix = m[3] || '';
         var decMatch = numPart.match(/\.(\d+)$/);
         var decimals = decMatch ? decMatch[1].length : 0;
-        return { prefix: prefix, suffix: suffix, decimals: decimals };
+        return {
+          prefix: prefix,
+          suffix: suffix,
+          decimals: decimals,
+          numeric: parseFloat(numPart.replace(/,/g, ''))
+        };
       }
       function formatWithStyle(value, style) {
         var abs = Math.abs(value);
@@ -81,7 +87,7 @@ looker.plugins.visualizations.add({
         return f.name.toLowerCase().includes('_link');
       }) || null;
 
-      // ── NEW: detect a "period" dimension by its rendered VALUES, not its name ──
+      // ── detect a "period" dimension by its rendered VALUES, not its name ──
       // Looks for a field where the data rows contain "current period" / "previous period"
       // text, so this works regardless of what you've named the filter dimension.
       var periodField = null;
@@ -163,9 +169,20 @@ looker.plugins.visualizations.add({
         // NEW PATH: derive the delta from the two rows' main measure value
         var currentValue  = row[mainField.name].value;
         var previousValue = previousRow[mainField.name].value;
-        var ppActualValue = currentValue - previousValue;
+        var rawDelta      = currentValue - previousValue;
 
         var style = analyzeFormat(mainValue);
+
+        // Percent measures are stored as fractions (0.4083) but render as "40.83%".
+        // Compare raw to rendered so the delta lands in the same units as the display.
+        var scale = 1;
+        if (style.numeric != null && currentValue) {
+          var ratio = style.numeric / currentValue;
+          if (ratio > 50 && ratio < 200) scale = 100;
+        }
+
+        var ppActualValue = rawDelta * scale;
+
         var isPercMetric = style.suffix.indexOf('%') !== -1 || mainField.name.toLowerCase().includes('perc');
 
         var ppActualRendered = formatWithStyle(ppActualValue, style);
@@ -187,7 +204,7 @@ looker.plugins.visualizations.add({
 
         var ppTooltipAttr = '';
         if (previousValue !== 0 && previousValue != null) {
-          var ppPercValue = ppActualValue / previousValue;
+          var ppPercValue = rawDelta / previousValue; // relative change - always on raw values
           var ppPercRendered = (ppPercValue >= 0 ? '+' : '') + (ppPercValue * 100).toFixed(2) + '%';
           ppTooltipAttr = ' title="' + ppPercRendered + ' difference vs prev. period"';
         }
