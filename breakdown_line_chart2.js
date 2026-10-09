@@ -39,7 +39,7 @@ const lineChartViz = {
       .lc-legend-toggle:hover { background: #f0f0f0; }
       .lc-legend-caret { font-size: 9px; color: #999; }
       .lc-legend-count { color: #999; }
-      .lc-legend-reset { font-size: 11px; color: #713170; cursor: pointer; user-select: none; text-decoration: underline; }
+      .lc-legend-reset { font-size: 11px; color: #7B0060; cursor: pointer; user-select: none; text-decoration: underline; }
       .lc-chart-wrap { flex: 1; position: relative; min-height: 200px; }
       .lc-svg { width: 100%; height: 100%; }
       .lc-axis-label { font-size: 11px; fill: #888; }
@@ -49,8 +49,8 @@ const lineChartViz = {
       .lc-tooltip-swatch { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
       .lc-tooltip-val { color: #444; }
       .lc-tooltip-pp { font-size: 11px; margin-left: auto; }
-      .lc-pos { color: #1a7f45; }
-      .lc-neg { color: #c0392b; }
+      .lc-pos { color: #B0BC25; }
+      .lc-neg { color: #B52555; }
       .lc-neu { color: #aaa; }
       .lc-debug { font-size: 11px; color: #aaa; padding: 8px; background: #fafafa; border-radius: 4px; margin-bottom: 10px; }
       .lc-divider { width: 1px; height: 18px; background: #e0e0e0; margin: 0 4px; }
@@ -89,10 +89,10 @@ const lineChartViz = {
     const isLowGood = config.is_low_good || false;
     const zeroBase  = config.y_zero_base !== false;
 
-    // ── Colour palette (Looker-ish, enough for ~11 values) ──
+    // ── Pure brand palette (pack colours, light/dark pairs) ──
     const PALETTE = [
-      "#713170", "#F2A900", "#96A34F", "#274C46", "#553527",
-      "#BE0021", "#FFB4A8", "#E65A1E", "#556041", "#7C1334", "#EAE5DC"
+      "#7B0060", "#FFB81C", "#00558C", "#1D6960", "#C07D59", "#FA8DDC", "#DC4405",
+      "#51A8E0", "#683431", "#115E67", "#B0BC25", "#B52555", "#86C8BC", "#FFAD95"
     ];
     // ── Collect all breakdown series values ──
     let seriesValues = [];

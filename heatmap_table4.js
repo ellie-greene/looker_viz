@@ -50,7 +50,7 @@ looker.plugins.visualizations.add({
       type: "string",
       display: "color",
       label: "Data bar colour",
-      default: "#713170", // Pure purple
+      default: "#7B0060", // Duck dark
     },
     show_direction_badge: {
       section: "Formatting",
@@ -75,18 +75,18 @@ looker.plugins.visualizations.add({
     },
   },
 
-  // Pure brand palette, ordered for legibility on a white ramp
+  // Pure pack colours (dark shades first), ordered for legibility on a white ramp
   _PALETTE: [
-    "#713170", // purple
-    "#274C46", // dark green
-    "#E65A1E", // orange
-    "#96A44F", // light green
-    "#7C1334", // deep red
-    "#556041", // sage
-    "#F2A900", // yellow
-    "#553527", // brown
-    "#BE0021", // red
-    "#FFB4A8", // pink
+    "#7B0060", // Duck dark
+    "#00558C", // Turkey dark
+    "#DC4405", // Chicken dark
+    "#006731", // Veggie dark
+    "#B52555", // Salmon dark
+    "#115E67", // Herring dark
+    "#683431", // Lamb dark
+    "#1D6960", // Game dark
+    "#C07D59", // Lamb light
+    "#FFB81C", // Chicken light
   ],
 
   // ────────────────────────────────────────────────────────────────────────
@@ -466,7 +466,7 @@ looker.plugins.visualizations.add({
       config.show_selector_label === false ? "none" : "block";
 
     const WHITE = [255, 255, 255];
-    const barColor = config.bar_color || "#713170";
+    const barColor = config.bar_color || "#7B0060";
     const useContrast = config.text_contrast !== false;
     const invertLowGood = config.invert_low_good !== false;
     const showBadge = config.show_direction_badge !== false;

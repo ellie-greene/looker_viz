@@ -80,8 +80,8 @@ looker.plugins.visualizations.add({
         if (previousRow && previousVal != null && currentVal != null) {
           var diff  = currentVal - previousVal;
           var arrow = diff >= 0
-            ? '<span class="kpi-arrow" style="color:#1e8c45;">▲</span>'
-            : '<span class="kpi-arrow" style="color:#c0392b;">▼</span>';
+            ? '<span class="kpi-arrow" style="color:#B0BC25;">▲</span>'
+            : '<span class="kpi-arrow" style="color:#B52555;">▼</span>';
           var diffStr = formatDiff(diff, currentRendered || previousRendered || '');
           ppLine = '<div class="kpi-pp">' + arrow + ' ' + diffStr + ' vs ' + compLabel + '</div>';
         } else if (previousRow) {

@@ -23,11 +23,11 @@ const eventCalendarViz = {
       .ecv-table th.year-h { text-align: left; }
       .ecv-table td.year-cell { font-size: 12px; font-weight: 600; color: #555; padding: 6px 10px; border-right: 1px solid #e8e8e8; white-space: nowrap; vertical-align: middle; background: #fafafa; }
       .ecv-table td.metric-cell { padding: 5px 6px; text-align: center; border: 0.5px solid #f0f0f0; vertical-align: middle; min-width: 68px; }
-      .ecv-table tr:hover td { background: #f7f8ff; }
+      .ecv-table tr:hover td { background: #FFF7DE; }
       .ecv-main { font-size: 14px; font-weight: 600; color: #222; line-height: 1.2; }
       .ecv-pp { font-size: 10px; margin-top: 3px; display: flex; align-items: center; justify-content: center; gap: 2px; white-space: nowrap; }
-      .ecv-pos { color: #1a7f45; }
-      .ecv-neg { color: #c0392b; }
+      .ecv-pos { color: #B0BC25; }
+      .ecv-neg { color: #B52555; }
       .ecv-neu { color: #aaa; }
       .ecv-null { color: #ccc; font-size: 12px; }
       .ecv-debug { font-size: 11px; color: #aaa; padding: 8px; background: #fafafa; border-radius: 4px; margin-bottom: 10px; word-break: break-all; }

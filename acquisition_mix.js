@@ -30,8 +30,8 @@ const acquisitionMixViz = {
       .am-threshold-val { font-variant-numeric: tabular-nums; min-width: 28px; text-align: center; color: #444; font-weight: 500; }
       .am-anomalies { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; min-height: 22px; }
       .am-pill { font-size: 11px; padding: 2px 8px; border-radius: 20px; display: inline-flex; align-items: center; gap: 3px; }
-      .am-pill-high { background: #fde8dd; color: #E65A1E; }
-      .am-pill-low  { background: #eef3e4; color: #556041; }
+      .am-pill-high { background: #FCE3D7; color: #DC4405; }
+      .am-pill-low  { background: #F3F5D6; color: #006731; }
       .am-pill-ok   { font-size: 11px; color: #aaa; }
       .am-rows { display: flex; flex-direction: column; gap: 6px; }
       .am-row { display: flex; align-items: center; gap: 8px; position: relative; }
@@ -41,16 +41,16 @@ const acquisitionMixViz = {
       .am-needle { position: absolute; top: -3px; width: 2px; height: 14px; background: #555; border-radius: 1px; z-index: 2; }
       .am-pct { font-size: 11px; width: 32px; text-align: right; flex-shrink: 0; color: #333; font-variant-numeric: tabular-nums; }
       .am-delta { font-size: 10px; font-weight: 500; padding: 1px 5px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; min-width: 44px; text-align: center; }
-      .am-delta-high { background: #fde8dd; color: #E65A1E; }
-      .am-delta-low  { background: #eef3e4; color: #556041; }
+      .am-delta-high { background: #FCE3D7; color: #DC4405; }
+      .am-delta-low  { background: #F3F5D6; color: #006731; }
       .am-delta-ok   { background: #f4f4f4; color: #999; }
       .am-tooltip { position: fixed; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 11px; font-size: 11px; pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; z-index: 9999; min-width: 160px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
       .am-tooltip-title { font-weight: 600; color: #222; margin-bottom: 5px; font-size: 12px; }
       .am-tooltip-row { display: flex; justify-content: space-between; gap: 16px; color: #555; margin-top: 3px; }
       .am-tooltip-label { color: #999; }
       .am-tooltip-val { font-weight: 500; color: #222; font-variant-numeric: tabular-nums; }
-      .am-tooltip-delta-high { color: #E65A1E; font-weight: 600; }
-      .am-tooltip-delta-low  { color: #556041; font-weight: 600; }
+      .am-tooltip-delta-high { color: #DC4405; font-weight: 600; }
+      .am-tooltip-delta-low  { color: #006731; font-weight: 600; }
       .am-tooltip-delta-ok   { color: #999; }
       .am-legend { display: flex; gap: 14px; margin-top: 12px; font-size: 10px; color: #999; flex-wrap: wrap; align-items: center; }
       .am-legend-item { display: flex; align-items: center; gap: 4px; }
@@ -194,7 +194,7 @@ const acquisitionMixViz = {
     rowsEl.className = "am-rows";
 
     rows.forEach(r => {
-      const barColor   = r.delta >= threshold ? "#E65A1E" : r.delta <= -threshold ? "#96A34F" : "#B4B2A9";
+      const barColor   = r.delta >= threshold ? "#DC4405" : r.delta <= -threshold ? "#B0BC25" : "#B0A198";
       const deltaClass = r.delta >= threshold ? "am-delta-high" : r.delta <= -threshold ? "am-delta-low" : "am-delta-ok";
       const sign       = r.delta > 0 ? "+" : "";
 
@@ -274,8 +274,8 @@ const acquisitionMixViz = {
     legend.className = "am-legend";
     legend.innerHTML = `
       <div class="am-legend-item"><div class="am-legend-needle"></div><span>8-week avg</span></div>
-      <div class="am-legend-item"><div class="am-legend-bar" style="background:#E65A1E;opacity:0.8"></div><span>higher than usual</span></div>
-      <div class="am-legend-item"><div class="am-legend-bar" style="background:#96A34F;opacity:0.8"></div><span>lower than usual</span></div>
+      <div class="am-legend-item"><div class="am-legend-bar" style="background:#DC4405;opacity:0.8"></div><span>higher than usual</span></div>
+      <div class="am-legend-item"><div class="am-legend-bar" style="background:#B0BC25;opacity:0.8"></div><span>lower than usual</span></div>
     `;
     wrap.appendChild(legend);
 

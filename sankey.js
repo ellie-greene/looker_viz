@@ -7,19 +7,20 @@
 
 (function () {
 
-  // ── Pure Pet Food brand palette (same order used across scorecards.js / line_chart_breakdown.js) ──
+  // ── Pure Pet Food brand palette (pack colours; same order across the line, bar and sankey vizs) ──
   var PURE_PALETTE = [
-    '#713170', // purple
-    '#F2A900', // yellow
-    '#96A44F', // light green
-    '#274C46', // dark green
-    '#553527', // brown
-    '#BE0021', // red
-    '#FFB4A8', // pink
-    '#E65A1E', // orange
-    '#556041', // sage
-    '#7C1334', // deep red
-    '#EAE5DC'  // off-white
+    '#7B0060', // Duck dark
+    '#FFB81C', // Chicken light
+    '#00558C', // Turkey dark
+    '#1D6960', // Game dark
+    '#C07D59', // Lamb light
+    '#FA8DDC', // Duck light
+    '#DC4405', // Chicken dark
+    '#51A8E0', // Turkey light
+    '#683431', // Lamb dark
+    '#115E67', // Herring dark
+    '#B0BC25', // Veggie light
+    '#B52555'  // Salmon dark
   ];
 
   var FONT_STACK = "'Sofia Pro Medium', 'Proxima Nova', Arial, sans-serif";
@@ -76,7 +77,7 @@
         '.pure-sankey-wrap .node-title { font-size:13px; font-weight:600; }' +
         '.pure-sankey-wrap .node-sub { font-size:11px; fill:#6b6a63; }' +
         '.pure-sankey-wrap .col-header { font-size:12px; font-weight:600; fill:#6b6a63; text-transform:uppercase; letter-spacing:.03em; }' +
-        '.pure-sankey-tip { position:absolute; pointer-events:none; background:#274C46; color:#fff; ' +
+        '.pure-sankey-tip { position:absolute; pointer-events:none; background:#7B0060; color:#fff; ' +
         'font-family:' + FONT_STACK + '; font-size:12px; padding:6px 10px; border-radius:4px; ' +
         'opacity:0; transition:opacity .1s; z-index:10; white-space:nowrap; }' +
         '.pure-sankey-wrap .ribbon { cursor:pointer; }' +

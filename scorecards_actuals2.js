@@ -50,9 +50,9 @@ looker.plugins.visualizations.add({
         var filterValue = (appliedFilters[sourceGroupFilter].value || '').trim();
         var sgColour = null;
         if (/digital/i.test(filterValue)) {
-          sgColour = '#1A73E8';
+          sgColour = '#00558C';
         } else if (/face.*(2|to).*face|f2f/i.test(filterValue)) {
-          sgColour = '#D93025';
+          sgColour = '#DC4405';
         }
         if (sgColour) {
           var displayValue = filterValue.charAt(0).toUpperCase() + filterValue.slice(1);
@@ -98,9 +98,9 @@ looker.plugins.visualizations.add({
         var emojiValue = targetPercField ? row[targetPercField.name].value : (targetActualValue >= 0 ? 1 : -1);
         var targetEmoji;
         if (isLowGood) {
-          targetEmoji = emojiValue < 0 ? '🟢' : emojiValue <= 0.05 ? '🟡' : '🔴';
+          targetEmoji = emojiValue < 0 ? '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#B0BC25;vertical-align:baseline;margin-right:1px;"></span>' : emojiValue <= 0.05 ? '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#FFB81C;vertical-align:baseline;margin-right:1px;"></span>' : '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#B52555;vertical-align:baseline;margin-right:1px;"></span>';
         } else {
-          targetEmoji = emojiValue >= 0 ? '🟢' : emojiValue >= -0.05 ? '🟡' : '🔴';
+          targetEmoji = emojiValue >= 0 ? '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#B0BC25;vertical-align:baseline;margin-right:1px;"></span>' : emojiValue >= -0.05 ? '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#FFB81C;vertical-align:baseline;margin-right:1px;"></span>' : '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#B52555;vertical-align:baseline;margin-right:1px;"></span>';
         }
         var isPercMetric = targetActualField.name.toLowerCase().includes('_perc');
         var vsTargetLabel = isPercMetric
@@ -125,7 +125,7 @@ looker.plugins.visualizations.add({
       if (linkField) {
         var linkLinks = row[linkField.name].links;
         if (linkLinks && linkLinks.length > 0) {
-          linkIcon = '<div id="kpi-link-icon" style="font-size:1.2em; margin-top:6px; cursor:pointer; color:#4285F4;">↗</div>';
+          linkIcon = '<div id="kpi-link-icon" style="font-size:1.2em; margin-top:6px; cursor:pointer; color:#7B0060;">↗</div>';
         }
       }
 

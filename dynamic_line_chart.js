@@ -24,15 +24,15 @@ const lineChartViz = {
       .lc-chart-wrap { flex: 1; position: relative; min-height: 200px; }
       .lc-svg { width: 100%; height: 100%; }
       .lc-axis-label { font-size: 11px; fill: #888; }
-      .lc-axis-label-r { font-size: 11px; fill: #274C46; }
+      .lc-axis-label-r { font-size: 11px; fill: #00558C; }
       .lc-tooltip { position: absolute; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 12px; font-size: 12px; pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; z-index: 10; min-width: 140px; }
       .lc-tooltip-title { font-weight: 600; color: #222; margin-bottom: 6px; }
       .lc-tooltip-row { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
       .lc-tooltip-swatch { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
       .lc-tooltip-val { color: #444; }
       .lc-tooltip-pp { font-size: 11px; margin-left: auto; }
-      .lc-pos { color: #1a7f45; }
-      .lc-neg { color: #c0392b; }
+      .lc-pos { color: #B0BC25; }
+      .lc-neg { color: #B52555; }
       .lc-neu { color: #aaa; }
       .lc-debug { font-size: 11px; color: #aaa; padding: 8px; background: #fafafa; border-radius: 4px; margin-bottom: 10px; }
       .lc-divider { width: 1px; height: 18px; background: #e0e0e0; margin: 0 4px; }
@@ -70,8 +70,8 @@ const lineChartViz = {
     const breakdownField = dims.length > 1 ? dims[1] : null;
 
     const isLowGood = config.is_low_good || false;
-    const COLOR_A = "#713170";
-    const COLOR_B = "#274C46";
+    const COLOR_A = "#7B0060"; // Duck dark
+    const COLOR_B = "#00558C"; // Turkey dark
 
     // ── Build breakdown values from data ──
     let breakdownValues = [];
@@ -299,7 +299,7 @@ const lineChartViz = {
         areaPath += ` L ${xScale(valid[valid.length - 1].i)} ${yScaleN(baseline)} Z`;
         const area = document.createElementNS("http://www.w3.org/2000/svg", "path");
         area.setAttribute("d", areaPath);
-        area.setAttribute("fill", "rgba(113, 49, 112, 0.08)");
+        area.setAttribute("fill", "rgba(123, 0, 96, 0.08)");
         svg.appendChild(area);
       }
 
