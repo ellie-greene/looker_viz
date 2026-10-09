@@ -22,6 +22,9 @@
  *  - Grand-totals footer row, computed client-side across the rows the
  *    visualisation actually received (see caveat below)
  *  - Drill menu support on cell click
+ *  - Click any column header to sort (measures: high → low first; dimensions:
+ *    A → Z first; a third click restores Looker's row order). The totals
+ *    footer stays pinned at the bottom.
  *
  * A note on totals: Looker's Visualization API does not hand custom
  * visualisations a separately-computed grand-total row — queryResponse only
@@ -149,6 +152,15 @@ looker.plugins.visualizations.add({
       }
       .sht-table th.sht-num { text-align: right; }
       .sht-table th.sht-total { background: #f4f2f5; }
+      .sht-table th.sht-sortable {
+        cursor: pointer;
+        user-select: none;
+      }
+      .sht-table th.sht-sortable:hover { background: #f1f3f4; }
+      .sht-sort-ind {
+        margin-left: 4px;
+        font-size: 11px;
+      }
       .sht-dir {
         display: block;
         font-weight: 400;
@@ -206,6 +218,7 @@ looker.plugins.visualizations.add({
     this._container.appendChild(style);
     this._content = this._container.appendChild(document.createElement("div"));
     this._registeredOptionsKey = null;
+    this._sort = null; // { key, dir } — survives re-renders
   },
   // ─── Helpers ─────────────────────────────────────────────────────────────
   _hexToRgb: function (hex) {
@@ -243,6 +256,79 @@ looker.plugins.visualizations.add({
     if (!isFinite(n)) return String(n);
     const rounded = Math.round(n * 100) / 100;
     return rounded.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  },
+  // ─── Column sorting ──────────────────────────────────────────────────────
+  // Headers carrying data-sort are clickable. First click sorts measures
+  // high → low and dimensions A → Z, second click reverses, third restores
+  // Looker's row order. Existing <tr>s are reordered in place, so colours,
+  // drill links and the tfoot totals row are unaffected. Nulls always sort last.
+  _compareValues: function (a, b, dir) {
+    const aNull = a == null || (typeof a === "number" && !isFinite(a));
+    const bNull = b == null || (typeof b === "number" && !isFinite(b));
+    if (aNull || bNull) return aNull === bNull ? 0 : aNull ? 1 : -1;
+    const c =
+      typeof a === "number" && typeof b === "number"
+        ? a - b
+        : String(a).localeCompare(String(b), undefined, {
+            numeric: true,
+            sensitivity: "base",
+          });
+    return dir === "desc" ? -c : c;
+  },
+  _bindSorting: function (getters, data) {
+    const self = this;
+    const table = this._content.querySelector("table.sht-table");
+    if (!table) return;
+    const tbody = table.tBodies[0];
+    const rows = Array.prototype.slice.call(tbody.rows);
+    const headers = Array.prototype.slice.call(
+      table.querySelectorAll("th[data-sort]")
+    );
+    // Drop a remembered sort whose column no longer exists
+    if (self._sort && !getters[self._sort.key]) self._sort = null;
+    function rowIndex(tr) {
+      return parseInt(tr.getAttribute("data-r"), 10);
+    }
+    function apply() {
+      const sort = self._sort;
+      const order = rows.slice();
+      if (sort) {
+        const get = getters[sort.key];
+        order.sort(function (ra, rb) {
+          const ia = rowIndex(ra);
+          const ib = rowIndex(rb);
+          const c = self._compareValues(get(data[ia]), get(data[ib]), sort.dir);
+          return c !== 0 ? c : ia - ib;
+        });
+      }
+      order.forEach(function (tr) { tbody.appendChild(tr); });
+      headers.forEach(function (th) {
+        const active = sort && sort.key === th.getAttribute("data-sort");
+        th.querySelector(".sht-sort-ind").textContent = active
+          ? sort.dir === "asc" ? "↑" : "↓"
+          : "";
+        th.setAttribute(
+          "aria-sort",
+          active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"
+        );
+      });
+    }
+    headers.forEach(function (th) {
+      th.addEventListener("click", function () {
+        const key = th.getAttribute("data-sort");
+        const firstDir = th.classList.contains("sht-num") ? "desc" : "asc";
+        const s = self._sort;
+        if (!s || s.key !== key) {
+          self._sort = { key: key, dir: firstDir };
+        } else if (s.dir === firstDir) {
+          self._sort = { key: key, dir: firstDir === "asc" ? "desc" : "asc" };
+        } else {
+          self._sort = null;
+        }
+        apply();
+      });
+    });
+    apply();
   },
   // ─── Main render ─────────────────────────────────────────────────────────
   updateAsync: function (data, element, config, queryResponse, details, done) {
@@ -413,10 +499,29 @@ looker.plugins.visualizations.add({
     const invertLowGood = config.invert_low_good !== false;
     const showBadge = config.show_direction_badge !== false;
     const showTotalsRow = config.show_totals_row !== false;
+    // ── Sort keys → value getters (keys are stable across re-renders) ─────
+    const sortGetters = {};
+    dims.forEach(function (d) {
+      sortGetters["d:" + d.name] = function (row) {
+        const cell = row[d.name];
+        return cell ? cell.value : null;
+      };
+    });
+    columns.forEach(function (col) {
+      col.sortKey = "m:" + col.measure.name + "|" + (col.pivotKey || "");
+      sortGetters[col.sortKey] = function (row) {
+        const cell = getCell(row, col);
+        return cell ? cell.value : null;
+      };
+    });
     // ── Build table ────────────────────────────────────────────────────────
     let html = '<table class="sht-table"><thead><tr>';
     dims.forEach(function (d) {
-      html += "<th>" + self._escape(d.label_short || d.label) + "</th>";
+      html +=
+        '<th class="sht-sortable" data-sort="' + self._escape("d:" + d.name) +
+        '" title="Click to sort">' +
+        self._escape(d.label_short || d.label) +
+        '<span class="sht-sort-ind"></span></th>';
     });
     columns.forEach(function (col) {
       let badge = "";
@@ -427,12 +532,14 @@ looker.plugins.visualizations.add({
           "</span>";
       }
       html +=
-        '<th class="sht-num' + (col.isTotal ? " sht-total" : "") + '">' +
-        self._escape(col.label) + badge + "</th>";
+        '<th class="sht-num sht-sortable' + (col.isTotal ? " sht-total" : "") +
+        '" data-sort="' + self._escape(col.sortKey) + '" title="Click to sort">' +
+        self._escape(col.label) +
+        '<span class="sht-sort-ind"></span>' + badge + "</th>";
     });
     html += "</tr></thead><tbody>";
     data.forEach(function (row, rIdx) {
-      html += "<tr>";
+      html += '<tr data-r="' + rIdx + '">';
       dims.forEach(function (d) {
         const cell = row[d.name];
         const text =
@@ -576,6 +683,7 @@ looker.plugins.visualizations.add({
     }
     html += "</table>";
     this._content.innerHTML = html;
+    this._bindSorting(sortGetters, data);
     // ── Drill support ──────────────────────────────────────────────────────
     this._content.querySelectorAll("td.sht-drillable").forEach(function (td) {
       td.addEventListener("click", function (event) {

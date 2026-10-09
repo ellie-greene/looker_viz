@@ -15,6 +15,8 @@
  *  - Pivot support: each pivot column of the selected measure scales independently
  *  - Drill menu support on cell click
  *  - Hover tooltip with rank and column min/max
+ *  - Click any column header to sort (measures: high → low first; dimensions:
+ *    A → Z first; a third click restores Looker's row order)
  *
  * Host at ellie-greene/looker_viz, serve via jsDelivr:
  *   https://cdn.jsdelivr.net/gh/ellie-greene/looker_viz@main/heatmap_table.js
@@ -149,6 +151,15 @@ looker.plugins.visualizations.add({
         vertical-align: bottom;
       }
       .sht-table th.sht-num { text-align: right; }
+      .sht-table th.sht-sortable {
+        cursor: pointer;
+        user-select: none;
+      }
+      .sht-table th.sht-sortable:hover { background: #f1f3f4; }
+      .sht-sort-ind {
+        margin-left: 4px;
+        font-size: 11px;
+      }
       .sht-dir {
         display: block;
         font-weight: 400;
@@ -227,6 +238,7 @@ looker.plugins.visualizations.add({
     this._registeredOptionsKey = null;
     this._selectKey = null;
     this._selected = null;
+    this._sort = null; // { key, dir } — survives re-renders
   },
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -271,6 +283,89 @@ looker.plugins.visualizations.add({
     if (Math.abs(n) >= 1e3) return (n / 1e3).toFixed(1) + "K";
     if (Number.isInteger(n)) return String(n);
     return n.toFixed(2);
+  },
+
+  // ─── Column sorting ──────────────────────────────────────────────────────
+  // Headers carrying data-sort are clickable. First click sorts measures
+  // high → low and dimensions A → Z, second click reverses, third restores
+  // Looker's row order. Existing <tr>s are reordered in place, so colours,
+  // ranks, drill links and tooltips (all keyed to the original data index)
+  // are unaffected. Nulls always sort last.
+
+  _compareValues: function (a, b, dir) {
+    const aNull = a == null || (typeof a === "number" && !isFinite(a));
+    const bNull = b == null || (typeof b === "number" && !isFinite(b));
+    if (aNull || bNull) return aNull === bNull ? 0 : aNull ? 1 : -1;
+    const c =
+      typeof a === "number" && typeof b === "number"
+        ? a - b
+        : String(a).localeCompare(String(b), undefined, {
+            numeric: true,
+            sensitivity: "base",
+          });
+    return dir === "desc" ? -c : c;
+  },
+
+  _bindSorting: function (getters, data) {
+    const self = this;
+    const table = this._content.querySelector("table.sht-table");
+    if (!table) return;
+    const tbody = table.tBodies[0];
+    const rows = Array.prototype.slice.call(tbody.rows);
+    const headers = Array.prototype.slice.call(
+      table.querySelectorAll("th[data-sort]")
+    );
+
+    // Drop a remembered sort whose column no longer exists
+    if (self._sort && !getters[self._sort.key]) self._sort = null;
+
+    function rowIndex(tr) {
+      return parseInt(tr.getAttribute("data-r"), 10);
+    }
+
+    function apply() {
+      const sort = self._sort;
+      const order = rows.slice();
+      if (sort) {
+        const get = getters[sort.key];
+        order.sort(function (ra, rb) {
+          const ia = rowIndex(ra);
+          const ib = rowIndex(rb);
+          const c = self._compareValues(get(data[ia]), get(data[ib]), sort.dir);
+          return c !== 0 ? c : ia - ib;
+        });
+      }
+      order.forEach(function (tr) { tbody.appendChild(tr); });
+
+      headers.forEach(function (th) {
+        const active = sort && sort.key === th.getAttribute("data-sort");
+        th.querySelector(".sht-sort-ind").textContent = active
+          ? sort.dir === "asc" ? "↑" : "↓"
+          : "";
+        th.setAttribute(
+          "aria-sort",
+          active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"
+        );
+      });
+    }
+
+    headers.forEach(function (th) {
+      th.addEventListener("click", function () {
+        const key = th.getAttribute("data-sort");
+        const firstDir = th.classList.contains("sht-num") ? "desc" : "asc";
+        const s = self._sort;
+        if (!s || s.key !== key) {
+          self._sort = { key: key, dir: firstDir };
+        } else if (s.dir === firstDir) {
+          self._sort = { key: key, dir: firstDir === "asc" ? "desc" : "asc" };
+        } else {
+          self._sort = null;
+        }
+        apply();
+      });
+    });
+
+    apply();
   },
 
   // ─── Main render ─────────────────────────────────────────────────────────
@@ -443,10 +538,30 @@ looker.plugins.visualizations.add({
           self._hexToRgb(self._PALETTE[col.measureIndex % self._PALETTE.length]);
       });
 
+      // Sort keys → value getters (keys are stable across re-renders)
+      const sortGetters = {};
+      dims.forEach(function (d) {
+        sortGetters["d:" + d.name] = function (row) {
+          const cell = row[d.name];
+          return cell ? cell.value : null;
+        };
+      });
+      columns.forEach(function (col) {
+        col.sortKey = "m:" + col.measure.name + "|" + (col.pivotKey || "");
+        sortGetters[col.sortKey] = function (row) {
+          const cell = getCell(row, col);
+          return cell ? cell.value : null;
+        };
+      });
+
       // Build table
       let html = '<table class="sht-table"><thead><tr>';
       dims.forEach(function (d) {
-        html += "<th>" + self._escape(d.label_short || d.label) + "</th>";
+        html +=
+          '<th class="sht-sortable" data-sort="' + self._escape("d:" + d.name) +
+          '" title="Click to sort">' +
+          self._escape(d.label_short || d.label) +
+          '<span class="sht-sort-ind"></span></th>';
       });
       columns.forEach(function (col) {
         let badge = "";
@@ -456,12 +571,16 @@ looker.plugins.visualizations.add({
             (col.direction === "low" ? "&#9660; good" : "&#9650; good") +
             "</span>";
         }
-        html += '<th class="sht-num">' + self._escape(col.label) + badge + "</th>";
+        html +=
+          '<th class="sht-num sht-sortable" data-sort="' + self._escape(col.sortKey) +
+          '" title="Click to sort">' +
+          self._escape(col.label) +
+          '<span class="sht-sort-ind"></span>' + badge + "</th>";
       });
       html += "</tr></thead><tbody>";
 
       data.forEach(function (row, rIdx) {
-        html += "<tr>";
+        html += '<tr data-r="' + rIdx + '">';
 
         dims.forEach(function (d) {
           const cell = row[d.name];
@@ -565,6 +684,7 @@ looker.plugins.visualizations.add({
 
       html += "</tbody></table>";
       self._content.innerHTML = html;
+      self._bindSorting(sortGetters, data);
 
       // ── Drill support ────────────────────────────────────────────────────
       self._content.querySelectorAll("td.sht-drillable").forEach(function (td) {
