@@ -11,26 +11,35 @@ const barChartViz = {
       section: "Style",
       order: 1
     },
+    orientation_default: {
+      type: "string",
+      label: "Default orientation",
+      display: "select",
+      values: [{ "Vertical": "vertical" }, { "Horizontal": "horizontal" }],
+      default: "vertical",
+      section: "Style",
+      order: 2
+    },
     is_low_good: {
       type: "boolean",
       label: "Lower is better (e.g. CPA)",
       default: false,
       section: "Style",
-      order: 2
+      order: 3
     },
     show_value_labels: {
       type: "boolean",
       label: "Show value labels on bars",
       default: false,
       section: "Style",
-      order: 3
+      order: 4
     },
     legend_collapse_at: {
       type: "number",
       label: "Collapse legend above N series",
       default: 8,
       section: "Style",
-      order: 4
+      order: 5
     }
   },
 
@@ -82,8 +91,17 @@ const barChartViz = {
     // ── persist selections across re-renders ──
     const existingSel    = wrap.querySelector('#bc-sel-primary');
     const existingLayout = wrap.querySelector('#bc-sel-layout');
+    const existingOrient = wrap.querySelector('#bc-sel-orient');
     const savedPrimary   = existingSel    ? existingSel.value    : '0';
-    const savedLayout    = existingLayout ? existingLayout.value : (config.layout_default || 'grouped');
+
+    // Keep the viewer's dropdown choice across re-renders, but if the "Default layout" /
+    // "Default orientation" option is changed in the editor, that change wins
+    const cfgLayout = config.layout_default      || 'grouped';
+    const cfgOrient = config.orientation_default || 'vertical';
+    const lastCfg   = this._lastCfg || {};
+    const savedLayout = (existingLayout && lastCfg.layout === cfgLayout) ? existingLayout.value : cfgLayout;
+    const savedOrient = (existingOrient && lastCfg.orient === cfgOrient) ? existingOrient.value : cfgOrient;
+    this._lastCfg = { layout: cfgLayout, orient: cfgOrient };
 
     wrap.innerHTML = "";
 
@@ -148,6 +166,20 @@ const barChartViz = {
     });
     sel.value = savedPrimary || "0";
     controls.appendChild(sel);
+
+    const lblO = document.createElement("label");
+    lblO.textContent = "Orientation";
+    controls.appendChild(lblO);
+
+    const selOrient = document.createElement("select");
+    selOrient.id = "bc-sel-orient";
+    [["vertical", "Vertical"], ["horizontal", "Horizontal"]].forEach(([v, t]) => {
+      const o = document.createElement("option");
+      o.value = v; o.textContent = t;
+      selOrient.appendChild(o);
+    });
+    selOrient.value = savedOrient;
+    controls.appendChild(selOrient);
 
     // Layout only matters when there is more than one series
     const selLayout = document.createElement("select");
@@ -377,7 +409,8 @@ const barChartViz = {
 
     function renderChart() {
       const mIdx    = parseInt(sel.value) || 0;
-      const stacked = seriesValues.length > 1 && selLayout.value === "stacked";
+      const stacked    = seriesValues.length > 1 && selLayout.value === "stacked";
+      const horizontal = selOrient.value === "horizontal";
 
       const oldSvg = chartWrap.querySelector("svg");
       if (oldSvg) oldSvg.remove();
@@ -415,46 +448,69 @@ const barChartViz = {
       const { ticks, nMin, nMax, interval } = niceTicks(lo, hi);
 
       // SVG dimensions
-      const W       = chartWrap.clientWidth  || 600;
-      const H       = chartWrap.clientHeight || 300;
-      const marginL = 65;
-      const marginR = 12;
+      const W = chartWrap.clientWidth  || 600;
+      const H = chartWrap.clientHeight || 300;
+
+      // Horizontal bars put the category labels on the left, so size that margin to the longest one
+      const catMaxChars = 28;
+      const longestCat  = xOrder.reduce((m, x) => Math.max(m, Math.min(x.length, catMaxChars)), 0);
+      const marginL = horizontal ? Math.max(50, Math.min(220, Math.round(longestCat * 6.6 + 14))) : 65;
+      const marginR = horizontal ? (showLabels ? 44 : 20) : 12;
       const marginT = 10;
-      const marginB = 44;
+      const marginB = horizontal ? 28 : 44;
       const plotW   = W - marginL - marginR;
       const plotH   = H - marginT - marginB;
 
-      const band   = plotW / xOrder.length;
-      const xBand  = i => marginL + i * band;
-      const yScale = v => marginT + plotH - ((v - nMin) / (nMax - nMin || 1)) * plotH;
-      const y0     = yScale(0);
+      // Category axis runs along X (vertical bars) or down Y (horizontal bars); value axis is the other way
+      const catLen   = horizontal ? plotH : plotW;
+      const band     = catLen / xOrder.length;
+      const catStart = i => (horizontal ? marginT : marginL) + i * band;
+      const valScale = v => horizontal
+        ? marginL + ((v - nMin) / (nMax - nMin || 1)) * plotW
+        : marginT + plotH - ((v - nMin) / (nMax - nMin || 1)) * plotH;
+      const v0 = valScale(0);
+
+      const barRect = (cs, cl, pA, pB, fill, rx) => svgEl("rect", horizontal
+        ? { x: Math.min(pA, pB), y: cs, width: Math.max(0.5, Math.abs(pB - pA)), height: cl, fill, rx }
+        : { x: cs, y: Math.min(pA, pB), width: cl, height: Math.max(0.5, Math.abs(pB - pA)), fill, rx });
 
       const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H });
       svg.classList.add("bc-svg");
 
-      // Gridlines + left axis
+      // Gridlines + value axis
       ticks.forEach(v => {
-        const y = yScale(v);
-        svg.appendChild(svgEl("line", {
-          x1: marginL, x2: W - marginR, y1: y, y2: y,
-          stroke: v === 0 ? "#ddd" : "#f0f0f0", "stroke-width": "1"
-        }));
-        const t = svgEl("text", { x: marginL - 6, y: y + 4, "text-anchor": "end" });
+        const p      = valScale(v);
+        const stroke = v === 0 ? "#ddd" : "#f0f0f0";
+        let t;
+        if (horizontal) {
+          svg.appendChild(svgEl("line", { x1: p, x2: p, y1: marginT, y2: marginT + plotH, stroke, "stroke-width": "1" }));
+          t = svgEl("text", { x: p, y: marginT + plotH + 16, "text-anchor": "middle" });
+        } else {
+          svg.appendChild(svgEl("line", { x1: marginL, x2: W - marginR, y1: p, y2: p, stroke, "stroke-width": "1" }));
+          t = svgEl("text", { x: marginL - 6, y: p + 4, "text-anchor": "end" });
+        }
         t.classList.add("bc-axis-label");
         t.textContent = fmtTick(v, measure, interval);
         svg.appendChild(t);
       });
 
-      // X axis labels
-      const maxLabels = Math.max(1, Math.floor(plotW / 60));
+      // Category axis labels
+      const maxLabels = Math.max(1, Math.floor(catLen / (horizontal ? 16 : 60)));
       const step      = Math.max(1, Math.ceil(xOrder.length / maxLabels));
       xOrder.forEach((x, i) => {
         if (i % step !== 0) return;
-        const t = svgEl("text", { x: xBand(i) + band / 2, y: marginT + plotH + 16, "text-anchor": "middle" });
+        const c = catStart(i) + band / 2;
+        const t = svgEl("text", horizontal
+          ? { x: marginL - 6, y: c + 4, "text-anchor": "end" }
+          : { x: c, y: marginT + plotH + 16, "text-anchor": "middle" });
         t.classList.add("bc-axis-label");
-        t.textContent = x;
+        t.textContent = horizontal && x.length > catMaxChars ? x.slice(0, catMaxChars - 1) + "…" : x;
+        if (horizontal && x.length > catMaxChars) {
+          const full = svgEl("title"); full.textContent = x; t.appendChild(full);
+        }
         svg.appendChild(t);
       });
+
 
       // Tooltip wiring
       function attachTooltip(rect, x, xi, sVal, p) {
@@ -502,19 +558,24 @@ const barChartViz = {
         }
       }
 
-      function addLabel(cx, yTop, yBottom, v, positive) {
+      // cc = centre of the bar along the category axis; pPos / pNeg = pixel position of the
+      // positive / negative end of the bar along the value axis
+      function addLabel(cc, pPos, pNeg, v, positive) {
         if (!showLabels) return;
-        const t = svgEl("text", { x: cx, y: positive ? yTop - 4 : yBottom + 11, "text-anchor": "middle" });
+        const t = svgEl("text", horizontal
+          ? { x: positive ? pPos + 4 : pNeg - 4, y: cc + 4, "text-anchor": positive ? "start" : "end" }
+          : { x: cc, y: positive ? pPos - 4 : pNeg + 11, "text-anchor": "middle" });
         t.classList.add("bc-value-label");
         t.textContent = fmtShort(v, measure);
         svg.appendChild(t);
       }
 
+
       // Draw bars
       xOrder.forEach((x, xi) => {
-        const pad = Math.min(band * 0.2, 12);
-        const groupW = Math.max(1, band - pad);
-        const gx = xBand(xi) + (band - groupW) / 2;
+        const pad       = Math.min(band * 0.2, 12);
+        const groupSize = Math.max(1, band - pad);
+        const gs        = catStart(xi) + (band - groupSize) / 2;   // start of this group along the category axis
 
         if (stacked) {
           let posBase = 0, negBase = 0;
@@ -524,47 +585,40 @@ const barChartViz = {
             const from = v >= 0 ? posBase : negBase;
             const to   = from + v;
             if (v >= 0) posBase = to; else negBase = to;
-            const yA = yScale(Math.max(from, to));
-            const yB = yScale(Math.min(from, to));
-            const rect = svgEl("rect", {
-              x: gx, y: yA, width: groupW, height: Math.max(0.5, yB - yA),
-              fill: seriesColour[sVal], rx: 2
-            });
+            const rect = barRect(gs, groupSize, valScale(from), valScale(to), seriesColour[sVal], 2);
             svg.appendChild(rect);
             attachTooltip(rect, x, xi, sVal, seriesMap.get(sVal).get(x));
           });
           if (showLabels) {
             const tot = posBase + negBase;
             if (posBase !== 0 || negBase !== 0) {
-              addLabel(gx + groupW / 2, yScale(posBase), yScale(negBase), tot, tot >= 0);
+              addLabel(gs + groupSize / 2, valScale(posBase), valScale(negBase), tot, tot >= 0);
             }
           }
         } else {
-          const n    = activeSeries.length;
-          const gap  = n > 1 ? 2 : 0;
-          const barW = Math.max(1, (groupW - gap * (n - 1)) / n);
+          const n       = activeSeries.length;
+          const gap     = n > 1 ? 2 : 0;
+          const barSize = Math.max(1, (groupSize - gap * (n - 1)) / n);
           activeSeries.forEach((sVal, si) => {
             const v = valueAt(sVal, x);
             if (v === null) return;
-            const bx   = gx + si * (barW + gap);
-            const yTop = yScale(Math.max(v, 0));
-            const yBot = yScale(Math.min(v, 0));
-            const rect = svgEl("rect", {
-              x: bx, y: yTop, width: barW, height: Math.max(0.5, yBot - yTop),
-              fill: seriesColour[sVal], rx: Math.min(2, barW / 2)
-            });
+            const bs   = gs + si * (barSize + gap);
+            const pPos = valScale(Math.max(v, 0));
+            const pNeg = valScale(Math.min(v, 0));
+            const rect = barRect(bs, barSize, pPos, pNeg, seriesColour[sVal], Math.min(2, barSize / 2));
             svg.appendChild(rect);
             attachTooltip(rect, x, xi, sVal, seriesMap.get(sVal).get(x));
-            // Only label when the bar is wide enough for the text
-            if (barW >= 22) addLabel(bx + barW / 2, yTop, yBot, v, v >= 0);
+            // Only label when the bar is thick enough for the text
+            if (barSize >= (horizontal ? 14 : 22)) addLabel(bs + barSize / 2, pPos, pNeg, v, v >= 0);
           });
         }
       });
 
       // Zero baseline on top of bars
-      svg.appendChild(svgEl("line", {
-        x1: marginL, x2: W - marginR, y1: y0, y2: y0, stroke: "#ccc", "stroke-width": "1"
-      }));
+      svg.appendChild(svgEl("line", horizontal
+        ? { x1: v0, x2: v0, y1: marginT, y2: marginT + plotH, stroke: "#ccc", "stroke-width": "1" }
+        : { x1: marginL, x2: W - marginR, y1: v0, y2: v0, stroke: "#ccc", "stroke-width": "1" }));
+
 
       chartWrap.appendChild(svg);
     }
@@ -599,6 +653,7 @@ const barChartViz = {
 
     sel.addEventListener("change", redraw);
     selLayout.addEventListener("change", redraw);
+    selOrient.addEventListener("change", redraw);
 
     done();
   }
