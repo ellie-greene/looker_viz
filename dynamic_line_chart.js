@@ -14,17 +14,17 @@ const lineChartViz = {
     element.innerHTML = "";
     const style = document.createElement("style");
     style.textContent = `
-      .lc-wrap { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 12px; overflow-x: auto; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
-      .lc-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
-      .lc-controls label { font-size: 12px; color: #6b6b6b; }
-      .lc-controls select { font-size: 12px; padding: 3px 7px; border-radius: 6px; border: 1px solid #ddd; background: #fff; color: #333; cursor: pointer; }
+      .lc-wrap { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 4px 6px; overflow-x: auto; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+      .lc-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+      .lc-controls label { font-size: 13px; color: #222; }
+      .lc-controls select { font-size: 13px; padding: 3px 7px; border-radius: 6px; border: 1px solid #ddd; background: #fff; color: #111; cursor: pointer; }
       .lc-legend { display: flex; gap: 14px; align-items: center; margin-left: 8px; }
-      .lc-legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #555; }
+      .lc-legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #222; }
       .lc-legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
       .lc-chart-wrap { flex: 1; position: relative; min-height: 200px; }
       .lc-svg { width: 100%; height: 100%; }
-      .lc-axis-label { font-size: 11px; fill: #888; }
-      .lc-axis-label-r { font-size: 11px; fill: #00558C; }
+      .lc-axis-label { font-size: 12px; fill: #222; }
+      .lc-axis-label-r { font-size: 12px; font-weight: 500; fill: #00558C; }
       .lc-tooltip { position: absolute; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 12px; font-size: 12px; pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; z-index: 10; min-width: 140px; }
       .lc-tooltip-title { font-weight: 600; color: #222; margin-bottom: 6px; }
       .lc-tooltip-row { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
@@ -351,9 +351,9 @@ const lineChartViz = {
       const W       = chartWrap.clientWidth  || 600;
       const H       = chartWrap.clientHeight || 300;
       const marginL = 65;
-      const marginR = hasComp ? 65 : 20;
-      const marginT = 20;
-      const marginB = 50;
+      const marginR = hasComp ? 60 : 12;
+      const marginT = 10;
+      const marginB = 44;
       const plotW   = W - marginL - marginR;
       const plotH   = H - marginT - marginB;
 

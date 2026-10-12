@@ -38,24 +38,24 @@ const barChartViz = {
     element.innerHTML = "";
     const style = document.createElement("style");
     style.textContent = `
-      .bc-wrap { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 12px; overflow-x: auto; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
-      .bc-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
-      .bc-controls label { font-size: 12px; color: #6b6b6b; }
-      .bc-controls select { font-size: 12px; padding: 3px 7px; border-radius: 6px; border: 1px solid #ddd; background: #fff; color: #333; cursor: pointer; }
+      .bc-wrap { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 4px 6px; overflow-x: auto; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+      .bc-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+      .bc-controls label { font-size: 13px; color: #222; }
+      .bc-controls select { font-size: 13px; padding: 3px 7px; border-radius: 6px; border: 1px solid #ddd; background: #fff; color: #111; cursor: pointer; }
       .bc-legend { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-left: 4px; max-height: 92px; overflow-y: auto; padding: 2px 0; }
       .bc-legend.bc-collapsed { display: none; }
-      .bc-legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #555; cursor: pointer; user-select: none; }
+      .bc-legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #222; cursor: pointer; user-select: none; }
       .bc-legend-item.hidden { opacity: 0.35; text-decoration: line-through; }
       .bc-legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
-      .bc-legend-toggle { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #555; background: #f7f7f7; border: 1px solid #e4e4e4; border-radius: 6px; padding: 3px 8px; cursor: pointer; user-select: none; white-space: nowrap; }
+      .bc-legend-toggle { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #222; background: #f7f7f7; border: 1px solid #e4e4e4; border-radius: 6px; padding: 3px 8px; cursor: pointer; user-select: none; white-space: nowrap; }
       .bc-legend-toggle:hover { background: #f0f0f0; }
       .bc-legend-caret { font-size: 9px; color: #999; }
       .bc-legend-count { color: #999; }
-      .bc-legend-reset { font-size: 11px; color: #7B0060; cursor: pointer; user-select: none; text-decoration: underline; }
+      .bc-legend-reset { font-size: 12px; color: #7B0060; cursor: pointer; user-select: none; text-decoration: underline; }
       .bc-chart-wrap { flex: 1; position: relative; min-height: 200px; }
       .bc-svg { width: 100%; height: 100%; }
-      .bc-axis-label { font-size: 11px; fill: #888; }
-      .bc-value-label { font-size: 10px; fill: #555; }
+      .bc-axis-label { font-size: 12px; fill: #222; }
+      .bc-value-label { font-size: 11px; fill: #222; }
       .bc-tooltip { position: absolute; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 12px; font-size: 12px; pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; z-index: 10; min-width: 160px; }
       .bc-tooltip-title { font-weight: 600; color: #222; margin-bottom: 6px; }
       .bc-tooltip-row { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
@@ -67,7 +67,7 @@ const barChartViz = {
       .bc-neg { color: #B52555; }
       .bc-neu { color: #aaa; }
       .bc-debug { font-size: 11px; color: #aaa; padding: 8px; background: #fafafa; border-radius: 4px; margin-bottom: 10px; }
-      .bc-controls-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+      .bc-controls-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
     `;
     element.appendChild(style);
     const wrap = document.createElement("div");
@@ -418,9 +418,9 @@ const barChartViz = {
       const W       = chartWrap.clientWidth  || 600;
       const H       = chartWrap.clientHeight || 300;
       const marginL = 65;
-      const marginR = 20;
-      const marginT = 20;
-      const marginB = 50;
+      const marginR = 12;
+      const marginT = 10;
+      const marginB = 44;
       const plotW   = W - marginL - marginR;
       const plotH   = H - marginT - marginB;
 
