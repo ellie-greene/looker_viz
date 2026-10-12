@@ -65,6 +65,22 @@
         default: 'comma',
         section: 'Style',
         order: 6
+      },
+      percent_basis: {
+        type: 'string',
+        label: 'Ribbon % as share of',
+        display: 'select',
+        values: [
+          { 'All signups': 'total' },
+          { 'Source node (left)': 'source' },
+          { 'Target node (right)': 'target' }
+        ],
+        default: 'total',
+        section: 'Style',
+        order: 7
+      },
+      show_link_labels: {
+        type: 'boolean', label: 'Show % on ribbons', default: false, section: 'Style', order: 8
       }
     },
 
@@ -80,6 +96,7 @@
         '.pure-sankey-tip { position:absolute; pointer-events:none; background:#7B0060; color:#fff; ' +
         'font-family:' + FONT_STACK + '; font-size:12px; padding:6px 10px; border-radius:4px; ' +
         'opacity:0; transition:opacity .1s; z-index:10; white-space:nowrap; }' +
+        '.pure-sankey-wrap .link-label { font-size:11px; font-weight:600; pointer-events:none; }' +
         '.pure-sankey-wrap .ribbon { cursor:pointer; }' +
         '.pure-sankey-wrap .ribbon:hover { opacity:0.75 !important; }' +
         '</style>' +
@@ -127,6 +144,24 @@
       });
 
       if (total === 0) { done(); return; }
+
+      // Totals per node, for "% of source / target node" ribbon percentages
+      var sourceTotals = {};
+      var targetTotals = {};
+      links.forEach(function (l) {
+        sourceTotals[l.source] = (sourceTotals[l.source] || 0) + l.value;
+        targetTotals[l.target] = (targetTotals[l.target] || 0) + l.value;
+      });
+      var pctBasis = config.percent_basis || 'total';
+      function linkPct(l) {
+        var denom = pctBasis === 'source' ? sourceTotals[l.source]
+                  : pctBasis === 'target' ? targetTotals[l.target]
+                  : total;
+        return denom ? (l.value / denom) * 100 : 0;
+      }
+      function linkPctText(l) {
+        return linkPct(l).toFixed(pctBasis === 'total' ? 0 : 1) + '%';
+      }
 
       // Stable colour assignment: union of node names, in first-seen order, cycling the brand palette
       var colorMap = {};
@@ -242,6 +277,7 @@
       function hideTip() { tip.style.opacity = 0; }
 
       // Ribbons
+      var linkLabels = []; // drawn after all ribbons so later ribbons don't cover them
       links.forEach(function (l) {
         var key = l.source + '||' + l.target;
         var s = srcSeg[key] && srcSeg[key].source;
@@ -259,8 +295,11 @@
           class: 'ribbon', d: d, fill: color, opacity: config.link_opacity != null ? config.link_opacity : 0.45, stroke: 'none'
         });
         path.addEventListener('mousemove', function (evt) {
-          var pct = ((l.value / total) * 100).toFixed(0);
-          showTip('<strong>' + l.source + ' \u2192 ' + l.target + '</strong><br>' + pct + '%', evt);
+          var basisText = pctBasis === 'source' ? ' of ' + l.source
+                        : pctBasis === 'target' ? ' of ' + l.target
+                        : '';
+          var countText = pctBasis === 'total' ? '' : ' (' + fmt(l.value) + ')';
+          showTip('<strong>' + l.source + ' \u2192 ' + l.target + '</strong><br>' + linkPctText(l) + basisText + countText, evt);
         });
         path.addEventListener('mouseleave', hideTip);
         path.addEventListener('click', function (evt) {
@@ -269,6 +308,26 @@
           }
         });
         g.appendChild(path);
+
+        // Optional % label on the ribbon: at the target end when % is of the target node, otherwise at the source end
+        if (config.show_link_labels) {
+          var atTarget = pctBasis === 'target';
+          var seg = atTarget ? t : s;
+          if (seg.y1 - seg.y0 >= 12) {
+            linkLabels.push({
+              x: atTarget ? xR - 6 : xL + 6,
+              y: (seg.y0 + seg.y1) / 2 + 4,
+              anchor: atTarget ? 'end' : 'start',
+              text: linkPctText(l)
+            });
+          }
+        }
+      });
+
+      linkLabels.forEach(function (lb) {
+        var txt = el('text', { class: 'link-label', x: lb.x, y: lb.y, 'text-anchor': lb.anchor });
+        txt.textContent = lb.text;
+        g.appendChild(txt);
       });
 
       // Nodes + labels
